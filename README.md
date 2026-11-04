@@ -1,4 +1,6 @@
-# Courtside
+# Pickl-App
+
+All in one Pickleball Application
 
 > **This branch is the project overview.** The code lives on [`develop`](https://github.com/Dominic-Ronquillo/Pickl-App/tree/develop) (latest working version), with backend work on [`be-main`](https://github.com/Dominic-Ronquillo/Pickl-App/tree/be-main) and frontend work on [`fe-main`](https://github.com/Dominic-Ronquillo/Pickl-App/tree/fe-main). To get started:
 >
@@ -7,6 +9,8 @@
 > ```
 >
 > Open pull requests against `develop`, `be-main` or `fe-main`, never `main`. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Courtside
 
 Courtside is a pickleball platform with two web apps: one for **players** and one for **venues**.
 
