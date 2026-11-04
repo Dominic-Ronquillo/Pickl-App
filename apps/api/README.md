@@ -11,8 +11,7 @@ and venue side (dashboard, schedule, check-ins, bookings, scoring).
 cp .env.example .env            # set JWT_SECRET
 docker compose up -d            # Postgres on :5432
 npm install
-npm run db:migrate              # creates tables (name the first migration "init")
-npm run db:constraints          # adds the no-double-booking constraints
+npm run db:migrate              # creates tables and the no-double-booking constraints
 npm run db:seed                 # 3 venues, 4 courts each, one owner, 8 players
 npm run dev                     # http://localhost:4000/api
 ```
@@ -24,7 +23,7 @@ Seed logins (password `password123`): `owner@rallyhouse.test` (venue side), `and
 ```
 prisma/
   schema.prisma             data model
-  sql/001_no_overlap.sql    Postgres exclusion constraints (no overlapping bookings/blocks)
+  migrations/               SQL migrations, including the no-overlap exclusion constraints
   seed.ts
 src/
   server.ts                 HTTP + Socket.IO bootstrap

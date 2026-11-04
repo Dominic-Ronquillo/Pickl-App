@@ -20,7 +20,7 @@ Accounts: one account type. A user is a player by default and becomes a venue ow
 
 - Money is stored as integer centavos (₱400 = 40000). Currency is PHP; payment methods CASH, GCASH, MAYA, CARD.
 - Times are stored in UTC; each venue has a time zone (default `Asia/Manila`) for hours, pricing and "today".
-- Double-booking is prevented twice: serializable transactions in services, plus Postgres exclusion constraints in `api/prisma/sql/001_no_overlap.sql`.
+- Double-booking is prevented twice: serializable transactions in services, plus Postgres exclusion constraints in the `no_overlap_constraints` migration under `apps/api/prisma/migrations/`.
 - Modules keep HTTP in `*.routes.ts` and rules in `*.service.ts`; both sides share services.
 - Errors are `{ error: { code, message } }`; messages are written to be shown to users directly.
 

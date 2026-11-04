@@ -198,7 +198,7 @@ model Booking {
   createdBy User      @relation("BookingCreatedBy", fields: [createdById], references: [id])
   payments  Payment[]
 
-  // Overlap protection is a Postgres exclusion constraint: see prisma/sql/001_no_overlap.sql
+  // Overlap protection is a Postgres exclusion constraint: see prisma/migrations/*_no_overlap_constraints
   @@index([courtId, startsAt])
   @@index([venueId, startsAt])
   @@index([userId, startsAt])

@@ -1,4 +1,3 @@
--- Run once after the first migration (npm run db:constraints).
 -- Guarantees at the database level that two active bookings, or two blocks,
 -- can never overlap on the same court, even under concurrent requests.
 CREATE EXTENSION IF NOT EXISTS btree_gist;
