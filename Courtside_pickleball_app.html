@@ -1,0 +1,1010 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F4F7FA">
+<title>Courtside pickleball app</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --page:#D9E2EB; --surface:#F4F7FA; --card:#FFFFFF; --ink:#14213D; --ink2:#4E5D78; --ink3:#7C8AA3; --line:#DDE4EC;
+  --court:#1D4E89; --court-deep:#163C6A; --kitchen:#3E8E5E; --ball:#F2D43B; --ball-ink:#2E2700;
+  --warn:#B4541A; --danger:#B42318; --ok:#2E7D4F; --frame:#0E1A2C; --scrim:rgba(10,20,35,.45); --accent:#1D4E89; --tint:rgba(29,78,137,.10);
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --page:#060C16; --surface:#0E1A2B; --card:#15243A; --ink:#E8EEF6; --ink2:#A9B6CA; --ink3:#7D8BA2; --line:#24364F;
+    --court:#2F64A8; --court-deep:#1F4A80; --kitchen:#3F8F60; --warn:#E39A5C; --danger:#F07167; --ok:#5CC28A; --frame:#000;
+    --scrim:rgba(0,0,0,.6); --accent:#8DB6EA; --tint:rgba(141,182,234,.14); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --page:#060C16; --surface:#0E1A2B; --card:#15243A; --ink:#E8EEF6; --ink2:#A9B6CA; --ink3:#7D8BA2; --line:#24364F;
+  --court:#2F64A8; --court-deep:#1F4A80; --kitchen:#3F8F60; --warn:#E39A5C; --danger:#F07167; --ok:#5CC28A; --frame:#000;
+  --scrim:rgba(0,0,0,.6); --accent:#8DB6EA; --tint:rgba(141,182,234,.14); color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--page);color:var(--ink);font-family:'Archivo',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:15px;line-height:1.4;-webkit-font-smoothing:antialiased;overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:inherit}
+:focus-visible{outline:2px solid var(--ball);outline-offset:2px}
+svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* Header */
+.hdr{padding:12px 20px 12px;display:flex;align-items:center;gap:12px}
+.hdr .t{flex:1;min-width:0}
+.hdr h1{font-stretch:75%;font-weight:800;font-size:30px;line-height:1.05;letter-spacing:-.005em}
+.hdr p{color:var(--ink2);font-size:13px;margin-top:2px}
+.hdr.sub h1{font-size:22px}
+.biz .hdr{background:var(--court);color:#fff}
+.biz .hdr p{color:rgba(255,255,255,.78)}
+.avatar{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:750;font-size:14px;background:var(--ball);color:var(--ball-ink);flex:none}
+.biz .avatar{background:#fff;color:var(--court)}
+.iconbtn{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--card);border:1px solid var(--line);flex:none}
+.biz .iconbtn{background:rgba(255,255,255,.14);border-color:transparent}
+
+/* Scroll area + tabs */
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding:4px 20px 24px;-webkit-overflow-scrolling:touch;position:relative}
+.biz .scroll{padding-top:16px}
+.tabbar{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);background:var(--card);padding:6px 6px 10px}
+.tab{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;font-weight:650;color:var(--ink3);padding:6px 0 2px;border-radius:12px;position:relative}
+.tab svg.i{width:24px;height:24px}
+.tab[aria-current="page"]{color:var(--court)}
+.tab[aria-current="page"]::after{content:"";position:absolute;top:-7px;width:22px;height:4px;border-radius:0 0 4px 4px;background:var(--ball)}
+
+/* Shared blocks */
+.sec{font-stretch:80%;font-weight:750;font-size:19px;margin:24px 0 10px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.link{font-size:13px;font-weight:650;color:var(--accent);font-stretch:100%}
+.muted{color:var(--ink2);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px}
+.list{background:var(--card);border-radius:18px;border:1px solid var(--line);padding:0 14px}
+.ri{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);width:100%}
+.list .ri:last-child{border-bottom:0}
+.ri .grow{flex:1;min-width:0}
+.ri h3{font-size:15px;font-weight:650}
+.ri p{font-size:13px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{font-size:12px;font-weight:750;padding:4px 8px;border-radius:8px;min-width:30px;text-align:center}
+.badge.w{background:var(--kitchen);color:#fff}
+.badge.l{background:var(--line);color:var(--ink2)}
+.st{font-size:12px;font-weight:650;padding:4px 10px;border-radius:999px;white-space:nowrap}
+.st.play{background:var(--kitchen);color:#fff}
+.st.booked{background:var(--court);color:#fff}
+.st.free{border:1.5px solid var(--line);color:var(--ink2)}
+.st.maint{background:var(--warn);color:#fff}
+.st.unpaid{background:var(--ball);color:var(--ball-ink)}
+.st.cancel{background:var(--line);color:var(--ink2)}
+.note{display:block;width:100%;background:var(--ball);color:var(--ball-ink);border-radius:14px;padding:12px 14px;font-weight:600;font-size:14px;margin-top:8px}
+.empty{border:2px dashed var(--line);border-radius:18px;padding:18px;color:var(--ink2);text-align:center}
+.empty button{display:inline-block;margin-top:8px;min-height:44px;color:var(--accent);font-weight:700}
+
+.btn{display:block;width:100%;padding:14px;border-radius:14px;font-weight:750;text-align:center;font-size:16px}
+.btn.primary{background:var(--ball);color:var(--ball-ink)}
+.btn.dark{background:var(--court);color:#fff}
+.btn.line{border:1.5px solid var(--line);color:var(--ink)}
+.btn.small{display:inline-block;width:auto;padding:8px 14px;font-size:14px;border-radius:11px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.pill-btn{padding:9px 15px;border-radius:999px;font-weight:650;font-size:14px}
+.pill-btn.light{background:#fff;color:var(--court-deep)}
+.pill-btn.ghost{border:1.5px solid rgba(255,255,255,.55);color:#fff}
+
+.chips{display:flex;gap:8px;overflow-x:auto;margin:6px -20px 0;padding:2px 20px 6px;scrollbar-width:none}
+.chip{padding:7px 14px;border-radius:999px;border:1.5px solid var(--line);font-size:13px;font-weight:650;white-space:nowrap;color:var(--ink2);background:var(--card)}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:3px}
+.seg button{flex:1;padding:8px;border-radius:9px;font-weight:650;font-size:13px;color:var(--ink2);text-align:center}
+.seg button[aria-pressed="true"]{background:var(--court);color:#fff}
+
+.av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:750;color:#fff;flex:none}
+.stack{display:flex;padding-left:8px}
+.stack .av{margin-left:-8px;border:2px solid var(--card)}
+
+/* Home */
+.next{background:var(--court);color:#fff;border-radius:22px;padding:18px;position:relative;overflow:hidden}
+.next::before{content:"";position:absolute;right:-40px;top:14px;bottom:14px;width:170px;border:2px solid rgba(255,255,255,.2);border-right:0}
+.next::after{content:"";position:absolute;right:62px;top:14px;bottom:14px;width:46px;background:rgba(62,142,94,.55);border-left:2px solid rgba(255,255,255,.2)}
+.next>*{position:relative;z-index:1}
+.next .where{opacity:.82;font-size:14px}
+.next .when{font-stretch:72%;font-weight:800;font-size:38px;line-height:1;margin:4px 0}
+.next .row{display:flex;gap:8px;margin-top:16px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);background:var(--card);border-radius:18px;margin-top:12px;border:1px solid var(--line)}
+.stats>div{padding:12px 14px}
+.stats>div+div{border-left:1px solid var(--line)}
+.stats b{display:block;font-stretch:72%;font-size:28px;font-weight:800;line-height:1.1}
+.stats span{font-size:12px;color:var(--ink2)}
+.hs{display:flex;gap:12px;overflow-x:auto;margin:0 -20px;padding:0 20px 4px;scroll-snap-type:x mandatory;scrollbar-width:none}
+.hs>*{scroll-snap-align:start;flex:none}
+.mini{width:220px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:6px}
+.mini h3{font-size:16px;font-weight:700}
+.mini .tm{font-stretch:75%;font-weight:800;font-size:22px;line-height:1.05}
+
+/* Open play list */
+.daygrp{font-stretch:80%;font-weight:750;font-size:17px;margin:20px 0 8px;color:var(--ink2)}
+.sess{display:grid;grid-template-columns:58px 1fr auto;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;width:100%;margin-bottom:10px}
+.sess-time b{display:block;font-stretch:72%;font-weight:800;font-size:26px;line-height:1}
+.sess-time span{font-size:12px;color:var(--ink2);font-weight:650}
+.sess h3{font-size:16px;font-weight:700}
+.sess p{font-size:13px;color:var(--ink2)}
+.spots{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:var(--ink2);font-weight:600}
+.bar{flex:1;height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--kitchen);border-radius:3px}
+.bar.tight i{background:var(--warn)}
+.fee{font-weight:750;font-size:15px}
+.joined-tag{font-size:11px;font-weight:750;color:var(--kitchen);display:block;text-align:right;margin-top:4px}
+
+/* Court diagram */
+.court{width:100%;height:auto;display:block}
+.courtbox{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:12px}
+.ch{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.ch h3{font-stretch:80%;font-weight:750;font-size:18px}
+.ch p{font-size:12px;color:var(--ink2)}
+.score{font-stretch:70%;font-weight:800;font-size:30px;line-height:1;font-variant-numeric:tabular-nums}
+.teams{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;font-size:13px}
+.teams div:last-child{text-align:right}
+.teams b{display:block;font-size:12px;color:var(--ink3);font-weight:650}
+.teamdot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:1px}
+.hs .courtbox{width:300px}
+
+.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.facts div{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.facts b{display:block;font-stretch:75%;font-size:22px;font-weight:800}
+.facts span{font-size:12px;color:var(--ink2)}
+.pending{border:2px dashed var(--line);border-radius:18px;padding:16px;color:var(--ink2);font-size:14px}
+.pending h3{color:var(--ink);font-size:15px;margin-bottom:4px}
+.ghost-rows{margin-top:12px;display:grid;gap:6px}
+.ghost-rows i{display:block;height:12px;border-radius:6px;background:var(--line)}
+.ctabar{padding:12px 20px 14px;background:var(--card);border-top:1px solid var(--line)}
+.ctabar .muted{text-align:center;margin-bottom:8px}
+
+/* Upnext */
+.upn{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.list .upn:last-child{border-bottom:0}
+.upn .pos{font-stretch:72%;font-weight:800;font-size:24px;width:26px;color:var(--ink3)}
+.upn.you .pos{color:var(--kitchen)}
+
+/* Booking */
+.dates{display:flex;gap:8px;overflow-x:auto;margin:0 -20px;padding:0 20px 4px;scrollbar-width:none}
+.date{width:54px;flex:none;border-radius:14px;padding:8px 0;text-align:center;background:var(--card);border:1.5px solid var(--line)}
+.date b{display:block;font-stretch:72%;font-size:24px;font-weight:800;line-height:1.1}
+.date small{font-size:11px;color:var(--ink2);font-weight:650}
+.date[aria-pressed="true"]{background:var(--court);border-color:var(--court);color:#fff}
+.date[aria-pressed="true"] small{color:rgba(255,255,255,.8)}
+.optrow{display:flex;gap:10px;align-items:center;margin-top:14px}
+.optrow .seg{flex:1}
+.grid{display:grid;grid-template-columns:50px repeat(4,1fr);gap:5px;margin-top:14px}
+.gh{font-size:12px;font-weight:750;text-align:center;color:var(--ink2);padding:2px 0 4px}
+.gt{font-size:11px;color:var(--ink3);align-self:center;font-weight:600}
+.slot{height:38px;border-radius:9px;background:var(--card);border:1.5px solid var(--line);font-size:11px;font-weight:650;color:var(--ink3);text-align:center}
+.slot.taken{background:repeating-linear-gradient(45deg,var(--line) 0 4px,transparent 4px 9px);border-color:var(--line);cursor:not-allowed}
+.slot.mine{background:var(--kitchen);border-color:var(--kitchen);color:#fff;cursor:default}
+.slot.sel{background:var(--ball);border-color:var(--ball);color:var(--ball-ink)}
+.legend{display:flex;gap:14px;margin-top:10px;font-size:12px;color:var(--ink2);flex-wrap:wrap}
+.legend span{display:flex;align-items:center;gap:5px}
+.legend i{width:14px;height:14px;border-radius:4px;border:1.5px solid var(--line);background:var(--card)}
+.legend i.t{background:repeating-linear-gradient(45deg,var(--line) 0 3px,transparent 3px 6px)}
+.legend i.s{background:var(--ball);border-color:var(--ball)}
+.legend i.m{background:var(--kitchen);border-color:var(--kitchen)}
+.sumbar{position:sticky;bottom:-24px;margin:16px -20px -24px;padding:12px 20px 16px;background:var(--card);border-top:1px solid var(--line);display:flex;align-items:center;gap:12px;z-index:2}
+.sumbar .grow{flex:1}
+.sumbar b{font-size:15px}
+.sumbar .btn{width:auto;padding:12px 18px}
+
+/* Business */
+.rev{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px}
+.rev .big{font-stretch:70%;font-weight:800;font-size:48px;line-height:1;margin-top:2px}
+.rev .delta{font-size:13px;color:var(--ok);font-weight:650;margin-top:4px}
+.bars{display:flex;align-items:flex-end;gap:4px;height:74px;margin-top:16px}
+.bars i{flex:1;background:var(--court);border-radius:3px 3px 0 0;opacity:.9}
+.bars i.now{background:var(--ball);opacity:1}
+.bars i.future{background:var(--line)}
+.axis{display:flex;justify-content:space-between;font-size:11px;color:var(--ink3);margin-top:6px}
+.sgrid .slot{height:44px;font-size:10.5px;line-height:1.15;padding:2px;overflow:hidden}
+.sgrid .slot.b{background:var(--court);border-color:var(--court);color:#fff}
+.sgrid .slot.o{background:var(--kitchen);border-color:var(--kitchen);color:#fff}
+.sgrid .slot.mt{background:repeating-linear-gradient(45deg,var(--warn) 0 5px,transparent 5px 10px);border-color:var(--warn);color:var(--ink)}
+.legend i.b{background:var(--court);border-color:var(--court)}
+.legend i.o{background:var(--kitchen);border-color:var(--kitchen)}
+.legend i.mt{background:repeating-linear-gradient(45deg,var(--warn) 0 3px,transparent 3px 6px);border-color:var(--warn)}
+.bsess{background:var(--card);border:1px solid var(--line);border-radius:18px;margin-bottom:12px;overflow:hidden}
+.bsess-head{display:flex;gap:12px;align-items:center;padding:14px;width:100%}
+.bsess-head .grow{flex:1}
+.bsess-head h3{font-size:16px;font-weight:700}
+.bsess-body{border-top:1px solid var(--line);padding:4px 14px 14px}
+.check{width:32px;height:32px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;color:transparent;flex:none}
+.check.on{background:var(--kitchen);border-color:var(--kitchen);color:#fff}
+.check svg.i{width:18px;height:18px;stroke-width:2.4}
+.ri .acts{display:flex;gap:6px;align-items:center}
+.txtbtn{font-size:13px;font-weight:650;color:var(--danger);padding:6px}
+
+/* Sheet, toast */
+.scrim{position:absolute;inset:0;background:var(--scrim);display:flex;align-items:flex-end;z-index:20;animation:fade .15s ease-out}
+.sheet{background:var(--card);width:100%;border-radius:24px 24px 0 0;padding:10px 20px 24px;max-height:86%;overflow:auto;animation:up .22s ease-out}
+.grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 16px}
+.sheet h2{font-stretch:78%;font-weight:800;font-size:24px;line-height:1.1}
+.sheet .muted{margin:4px 0 16px}
+.sheet .stack-btns{display:grid;gap:10px;margin-top:8px}
+.field{display:block;margin-bottom:12px}
+.field>span{font-size:13px;font-weight:650;color:var(--ink2);display:block;margin-bottom:5px}
+.field input,.field select{width:100%;padding:11px 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);font:inherit}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.toast{position:absolute;left:16px;right:16px;bottom:92px;background:var(--ink);color:var(--surface);padding:13px 16px;border-radius:14px;font-weight:650;font-size:14px;z-index:30;animation:up .2s ease-out;display:flex;gap:10px;align-items:center}
+.toast svg.i{color:var(--ball)}
+@keyframes fade{from{opacity:0}}
+@keyframes up{from{transform:translateY(16px);opacity:0}}
+
+/* =====================================================================
+   RESPONSIVE LAYER
+   Mobile  < 768  : full-bleed app, bottom tab bar
+   Tablet  768+   : icon rail on the left, multi-column grids
+   Laptop  1024+  : full sidebar (brand, app switcher, account)
+   Desktop 1200+  : two-column page layouts, max content width centred
+   ===================================================================== */
+:root{--pad:20px;--padb:24px;--navw:0px;padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+@media (max-width:359px){:root{--pad:16px}}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px;box-shadow:0 0 0 5px var(--ball)}
+body{background:var(--surface)}
+.shell{position:relative;width:100%;height:100%;overflow:hidden;display:flex;flex-direction:column;background:var(--surface);
+  --nav-bg:var(--card);--nav-ink:var(--ink);--nav-ink2:var(--ink2);--nav-line:var(--line);--nav-on-bg:var(--tint);--nav-on-ink:var(--accent)}
+.shell.biz{--nav-bg:var(--court-deep);--nav-ink:#fff;--nav-ink2:rgba(255,255,255,.8);--nav-line:rgba(255,255,255,.18);--nav-on-bg:rgba(255,255,255,.16);--nav-on-ink:#fff}
+.app{flex:1;display:flex;flex-direction:column;min-height:0;position:relative}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.pg{width:100%;max-width:680px;margin-inline:auto}
+
+/* header + scroll area */
+.hdr{padding:12px var(--pad);flex:none}
+.hdr h1{font-size:clamp(26px,7.4vw,30px);overflow-wrap:anywhere}
+.hdr.sub h1{font-size:clamp(20px,6vw,22px)}
+.iconbtn,.avatar{width:44px;height:44px}
+.scroll{padding:4px var(--pad) var(--padb);overscroll-behavior:contain}
+.biz .scroll{padding-top:16px}
+.scroll:focus{outline:none;box-shadow:none}
+
+/* navigation: bottom bar on phones */
+.tabbar{display:block;padding:6px 6px 10px;flex:none}
+.tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+.brand,.modes,.acct{display:none}
+.tab{min-height:48px;justify-content:center;padding:6px 2px 2px;color:var(--ink2)}
+.tab[aria-current="page"]{color:var(--accent)}
+.modes{gap:4px}
+.modes button{font-weight:650;text-align:center;color:var(--nav-ink2);border-radius:10px}
+.modes button[aria-pressed="true"]{background:var(--court);color:#fff}
+.shell.biz .modes button[aria-pressed="true"]{background:#fff;color:var(--court-deep)}
+.logo{width:44px;height:44px;border-radius:14px;background:var(--ball);color:var(--ball-ink);display:grid;place-items:center;flex:none}
+.brand b{display:block;font-stretch:75%;font-weight:800;font-size:22px;line-height:1}
+.brand small,.acct small{display:block;font-size:12px;color:var(--nav-ink2)}
+.acct b{display:block;font-size:14px;font-weight:700}
+.ctabar{display:flex;justify-content:center;flex:none;padding:12px var(--pad) 14px}
+.ctabar .btn{width:100%;max-width:520px}
+@media (max-width:767px){.shell.sub .tabbar{display:none}}
+@media (max-width:767px) and (max-height:500px){
+  .hdr{padding:6px var(--pad)}.hdr h1{font-size:22px}.tab{flex-direction:row;gap:8px;min-height:44px}
+}
+
+/* shared components: touch targets, wrapping, no overflow */
+.sec,.daygrp{overflow-wrap:anywhere}
+.ri p{white-space:normal}
+.vs{font-size:14px;font-weight:600}
+.link{padding:11px 4px;margin:-11px -4px}
+.btn.small,.pill-btn,.txtbtn{min-height:44px}
+.txtbtn{padding:6px 10px}
+.btn.ic{display:flex;justify-content:center;align-items:center;gap:8px}
+.chip{min-height:40px}
+.seg button{min-height:40px}
+.check{width:36px;height:36px;position:relative}
+.check::after{content:"";position:absolute;inset:-6px}
+.chips{flex-wrap:wrap;overflow:visible;margin:6px 0 0;padding:0}
+.dates{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;overflow:visible;margin:0;padding:0}
+.date{width:auto;min-width:0;min-height:56px}
+@media (max-width:359px){.dates{gap:4px}.date small{font-size:10px}.date b{font-size:22px}}
+.hs{margin:0 calc(var(--pad)*-1);padding:0 var(--pad) 4px}
+.hs .courtbox{width:min(300px,86vw)}
+.mini{width:min(220px,72vw)}
+.grid{grid-template-columns:var(--tcol,46px) repeat(4,minmax(0,1fr))}
+@media (max-width:359px){.grid{--tcol:38px;gap:4px}}
+.gt{color:var(--ink2)}
+.slot{height:44px;min-width:0;padding:0 2px;overflow:hidden}
+.sgrid .slot{height:48px;font-size:11px;overflow-wrap:anywhere}
+.sess{grid-template-columns:58px minmax(0,1fr) auto}
+.sess h3,.sess p{overflow-wrap:anywhere}
+.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.next .when{font-size:clamp(30px,9vw,38px)}
+.next .row{flex-wrap:wrap}
+.sumbar{position:sticky;bottom:calc(8px - var(--padb));margin:16px 0 0;padding:12px 14px;border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px -12px rgba(14,26,44,.45)}
+.sumbar .grow{min-width:0}
+.b-aside{display:contents}
+.bk{flex-wrap:wrap}
+.bk .acts{width:100%;justify-content:flex-end}
+.bk .acts:empty{display:none}
+.bk-amt{text-align:right}
+.tbl-h{display:none}
+.roster .ri:last-child{border-bottom:0}
+.dsk{display:none}
+.gridcard{min-width:0}
+
+/* dialogs and toasts */
+.scrim{justify-content:center}
+.sheet{max-width:560px;padding:10px var(--pad) 24px;max-height:92%;overscroll-behavior:contain}
+.sheet:focus{outline:none;box-shadow:none}
+.toast{max-width:480px;margin-inline:auto}
+
+/* hover (pointer devices only) */
+@media (hover:hover){
+  .sess:hover,.mini:hover,.bsess-head:hover{border-color:var(--court)}
+  .chip:hover,.date:not([aria-pressed="true"]):hover{border-color:var(--ink3)}
+  .btn:not([disabled]):hover,.pill-btn:hover{filter:brightness(.96)}
+  .slot:not(:disabled):not(.sel):hover{border-color:var(--court)}
+  .tab:hover{background:var(--nav-on-bg)}
+}
+
+/* ---------------- TABLET and up: left rail ---------------- */
+@media (min-width:768px){
+  :root{--pad:28px;--padb:32px;--navw:96px}
+  .app{display:grid;grid-template-columns:var(--navw) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;grid-template-areas:"nav head" "nav main" "nav foot"}
+  .hdr{grid-area:head;padding:22px var(--pad) 8px}
+  .hdr h1{font-size:clamp(30px,3vw,38px)}
+  .hdr.sub h1{font-size:clamp(24px,2.4vw,30px)}
+  .biz .hdr{background:transparent;color:var(--ink)}
+  .biz .hdr p{color:var(--ink2)}
+  .biz .hdr .avatar{background:var(--court);color:#fff}
+  .biz .iconbtn{background:var(--card);border-color:var(--line)}
+  .scroll,.biz .scroll{grid-area:main;padding:8px var(--pad) var(--padb)}
+  .ctabar{grid-area:foot;justify-content:flex-end;padding:14px var(--pad)}
+  .ctabar .btn{width:auto;min-width:260px}
+  .pg{max-width:920px}
+  .dsk{display:block}
+
+  .tabbar{grid-area:nav;display:flex;flex-direction:column;gap:16px;padding:18px 10px;background:var(--nav-bg);color:var(--nav-ink);border-top:0;border-right:1px solid var(--nav-line);overflow-y:auto}
+  .shell.biz .tabbar{border-right-color:transparent}
+  .brand{display:flex;justify-content:center;align-items:center;gap:12px}
+  .brand .t{display:none}
+  .modes{display:flex;flex-direction:column;padding:4px;border-radius:14px;border:1px solid var(--nav-line)}
+  .modes button{padding:9px 4px;font-size:12px;min-height:40px}
+  .modes .x{display:none}
+  .tabs{display:flex;flex-direction:column;gap:6px}
+  .tab{min-height:68px;font-size:11px;color:var(--nav-ink2)}
+  .tab[aria-current="page"]{background:var(--nav-on-bg);color:var(--nav-on-ink)}
+  .tab[aria-current="page"]::after{top:16px;bottom:16px;left:-10px;width:4px;height:auto;border-radius:0 4px 4px 0}
+  .acct{display:none}
+
+  .sessgrid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+  .sess{margin-bottom:0}
+  .courts{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+  .h-open .hs,.det .hs{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;overflow:visible;margin:0;padding:0;scroll-snap-type:none}
+  .det .hs{grid-template-columns:repeat(auto-fill,minmax(290px,1fr))}
+  .h-open .mini,.det .hs .courtbox{width:auto}
+  .next{padding:24px}
+  .next .when{font-size:44px}
+  .bars{height:100px}
+  .rev .big{font-size:56px}
+  .dates{max-width:560px}
+  .gridcard{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px 20px;margin-top:14px}
+  .gridcard .grid{margin-top:0;gap:6px;--tcol:60px}
+  .gridcard .gh{font-size:13px}
+  .gridcard .gt{font-size:12px}
+  .slot{height:46px;font-size:12px}
+  .sgrid .slot{height:50px;font-size:12px}
+  .gridcard .legend{margin-top:14px;font-size:13px}
+  .seg{max-width:440px}
+  .roster{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));column-gap:28px}
+  .bop .btn.dark{width:auto;display:inline-flex;padding:14px 24px}
+  .bsess{max-width:1100px}
+
+  .scrim{align-items:center;padding:24px}
+  .sheet{max-width:480px;border-radius:24px;padding:28px;max-height:100%;box-shadow:0 24px 60px -20px rgba(0,0,0,.5)}
+  .grab{display:none}
+  .toast{left:auto;right:24px;bottom:24px;width:min(420px,calc(100% - 48px));margin:0}
+}
+@media (min-width:768px) and (max-height:520px){
+  .brand,.acct{display:none}
+  .tabbar{gap:10px;padding:10px}
+  .tab{min-height:56px}
+}
+
+/* ---------------- LAPTOP: full sidebar ---------------- */
+@media (min-width:1024px){
+  :root{--pad:32px;--navw:248px}
+  .tabbar{padding:22px 16px;gap:18px}
+  .brand{justify-content:flex-start;padding:0 4px}
+  .brand .t{display:block}
+  .modes{flex-direction:row}
+  .modes button{flex:1;font-size:13px}
+  .modes .x{display:inline}
+  .tabs{gap:4px}
+  .tab{flex-direction:row;justify-content:flex-start;gap:12px;font-size:15px;padding:11px 14px;min-height:48px}
+  .tab svg.i{width:22px;height:22px}
+  .tab[aria-current="page"]::after{left:-16px}
+  .acct{display:flex;align-items:center;gap:12px;margin-top:auto;width:100%;padding:10px;border-radius:14px;border:1px solid var(--nav-line);color:var(--nav-ink)}
+  .acct .t{min-width:0;display:block}
+  .acct .avatar{width:40px;height:40px}
+  .hdr .avatar{display:none}
+  .pg{max-width:1000px}
+  .bk-t{display:grid;grid-template-columns:minmax(0,1fr) 220px 210px;align-items:center;gap:16px;flex-wrap:nowrap}
+  .bk-t .bk-amt{display:flex;align-items:center;justify-content:flex-end;gap:14px}
+  .bk-t .acts{width:auto}
+  .tbl-h{display:grid;grid-template-columns:minmax(0,1fr) 220px 210px;gap:16px;padding:12px 0;font-size:12px;font-weight:700;color:var(--ink2);border-bottom:1px solid var(--line)}
+  .tbl-h span:nth-child(2){text-align:right}.tbl-h span:nth-child(3){text-align:right}
+}
+@media (min-width:1024px) and (max-height:520px){.acct{display:none}}
+
+/* ---------------- DESKTOP: two-column pages ---------------- */
+@media (min-width:1200px){
+  :root{--pad:40px}
+  .pg{max-width:1360px}
+  .home{display:grid;grid-template-columns:minmax(0,1fr) minmax(340px,400px);column-gap:36px;align-items:start;grid-template-areas:"note note" "next stats" "open recent"}
+  .home .note-top{grid-area:note}.h-next{grid-area:next}.h-stats{grid-area:stats}.h-open{grid-area:open}.h-recent{grid-area:recent}
+  .det,.lin{display:grid;grid-template-columns:minmax(0,1fr) minmax(340px,400px);column-gap:36px;align-items:start}
+  .lin{grid-template-areas:"top top" "main side"}
+  .l-top{grid-area:top}.l-main{grid-area:main}.l-side{grid-area:side}
+  .d-side>.sec:first-child,.b-side>.sec:first-child{margin-top:0}
+  .bkpage{display:grid;grid-template-columns:minmax(0,1fr) 380px;column-gap:36px;align-items:start}
+  .b-aside{display:flex;flex-direction:column;position:sticky;top:0}
+  .b-aside .sumbar{order:-1;position:static;margin:14px 0 0}
+  .gridcard .grid{--tcol:70px}
+  .dash{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(300px,1fr);column-gap:36px;align-items:start;grid-template-areas:"rev stats" "up now"}
+  .x-rev{grid-area:rev;align-self:stretch}.x-stats{grid-area:stats;align-self:stretch}.x-now{grid-area:now}.x-up{grid-area:up}
+  .x-rev .rev{height:100%;display:flex;flex-direction:column}
+  .x-rev .bars{flex:1;min-height:110px;height:auto}
+  .x-stats .stats{margin:0;height:100%;grid-template-columns:1fr;grid-auto-rows:1fr}
+  .x-stats .stats>div{display:flex;align-items:center;justify-content:space-between;padding:14px 20px}
+  .x-stats .stats>div+div{border-left:0;border-top:1px solid var(--line)}
+  .x-stats .stats b{order:2}
+  .sch{display:grid;grid-template-columns:minmax(0,1fr) 320px;column-gap:36px;align-items:start;grid-template-areas:"top top" "main info" "main legend" "main ."}
+  .s-top{grid-area:top}.s-main{grid-area:main}.s-info{grid-area:info}.s-legend{grid-area:legend}
+  .s-info{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px 18px;margin-top:14px}
+  .s-info .muted{margin:0!important;font-size:14px}
+  .s-legend .legend{flex-direction:column;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px 18px;margin-top:14px}
+  .s-main.gridcard{margin-top:14px}
+}
+
+@media (prefers-reduced-motion: reduce){*{animation:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="shell" id="shell"><div class="app" id="app"></div></div>
+<div class="sr" id="live" role="status" aria-live="polite"></div>
+
+<script>
+/* ---------- Icons ---------- */
+const I = {
+  home:'<path d="M4 10.5 12 4l8 6.5V20h-5.5v-5.5h-5V20H4z"/>',
+  paddle:'<path d="M14.6 4.2a5.5 5.5 0 0 1 2.9 9.2l-3.6 3.6a5.5 5.5 0 0 1-7.8-7.8l3.6-3.6a5.5 5.5 0 0 1 4.9-1.4z"/><path d="M7.2 16.8 3.5 20.5"/><circle cx="19" cy="19" r="2"/>',
+  cal:'<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  lineup:'<rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M12 5v14M8.5 5v14M15.5 5v14M3 12h5.5M15.5 12H21"/>',
+  chart:'<path d="M4 20V11M10 20V5M16 20v-6M3 20h18"/>',
+  clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+  users:'<circle cx="9" cy="8.5" r="3.5"/><path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 5.2a3.5 3.5 0 0 1 0 6.6M18 14.8c2 .7 3.2 2.4 3.5 5.2"/>',
+  receipt:'<path d="M6 3.5h12v17l-2.5-1.6-2.3 1.6-2.2-1.6-2.3 1.6L6 20.5z"/><path d="M9 8.5h6M9 12h6M9 15.5h3.5"/>',
+  back:'<path d="M15 5l-7 7 7 7"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  check:'<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+  pin:'<path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/>',
+  chev:'<path d="m9 6 6 6-6 6"/>'
+};
+const ic = (n) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${I[n]}</svg>`;
+
+/* ---------- Data ---------- */
+const PLAYERS = [];
+const ME = -1;
+const ini = i => String(PLAYERS[i] || 'Player').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+const first = i => PLAYERS[i] || 'Player';
+const AVC = ['#1D4E89','#3E8E5E','#7A4FB5','#B4541A','#2B7A8C','#8C2B5A'];
+const av = i => `<span class="av" style="background:${AVC[Math.abs(i) % AVC.length]}" title="${first(i)}">${ini(i)}</span>`;
+
+const VENUES = ['Rally House','Dink District','Kitchen Line Club'];
+const DAYS = [...Array(7)].map((_, i) => {
+  const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()+i);
+  return { dow: d.toLocaleDateString('en-US', { weekday: 'short' }), d: d.getDate(), mon: d.toLocaleDateString('en-US', { month: 'short' }), date: d.toISOString().slice(0,10) };
+});
+const HOURS = [...Array(16)].map((_, i) => i + 6);
+const fmtH = h => `${(h % 12) || 12} ${h < 12 ? 'AM' : 'PM'}`;
+const fmtHs = h => `${(h % 12) || 12}${h < 12 ? 'a' : 'p'}`;
+const price = h => h >= 17 ? 500 : 400;
+const peso = n => '₱' + Number(n || 0).toLocaleString('en-US');
+let SESSIONS = [];
+
+/* ---------- State ---------- */
+const S = {
+  mode: 'player', tab: { player: 'home', business: 'dash' },
+  view: null, sheet: null, toast: null, filter: 'All',
+  joined: new Set(), venue: 0, day: 0, dur: 1, sel: null,
+  my: [], bizDay: 0, sched: {}, bizOpen: null, checked: new Set(),
+  bfilter: 'up', bookings: [], theme: 'auto'
+};
+
+/* ---------- Persistent local data ---------- */
+const STORAGE_KEY = 'courtside-app-data-v2';
+function saveState() {
+  try {
+    const data = { S: { ...S, joined: [...S.joined], checked: [...S.checked], sheet: null, toast: null }, SESSIONS };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (err) { console.warn('Could not save app data:', err); }
+}
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (data && data.S && Array.isArray(data.SESSIONS)) {
+      Object.assign(S, data.S);
+      S.joined = new Set(data.S.joined || []);
+      S.checked = new Set(data.S.checked || []);
+      S.sheet = null; S.toast = null;
+      SESSIONS = data.SESSIONS;
+      S.bookings = Array.isArray(S.bookings) ? S.bookings : [];
+      S.my = Array.isArray(S.my) ? S.my : [];
+      S.sched = S.sched || {};
+      SESSIONS.forEach(session => { session.roster = Array.isArray(session.roster) ? session.roster : []; });
+    }
+  } catch (err) { console.warn('Saved app data could not be loaded:', err); }
+}
+loadState();
+
+/* ---------- Helpers ---------- */
+const taken = (v, d, c, h) => {
+  const manual = S.sched[`${d}-${c}-${h}`];
+  if (manual && (manual.t === 'b' || manual.t === 'mt' || manual.t === 'o')) return true;
+  return S.bookings.some(b => b.status === 'up' && b.day === d && b.court === c && b.hour === h) && !mine(v,d,c,h);
+};
+const mine = (v, d, c, h) => S.my.some(b => b.v === v && b.d === d && b.c === c && h >= b.h && h < b.h + b.dur);
+
+function bizCell(d, c, h) {
+  const k = `${d}-${c}-${h}`;
+  if (S.sched[k]) return S.sched[k];
+  const booking = S.bookings.find(b => b.status === 'up' && b.day === d && b.court === c && b.hour === h);
+  if (booking) return { t: 'b', who: booking.who, bookingId: booking.id };
+  return { t: 'f' };
+}
+
+function clearBookingSchedule(b) {
+  if (!b) return;
+  for (let i = 0; i < Math.max(1, Number(b.dur) || 1); i++) {
+    const key = `${b.day}-${b.court}-${b.hour+i}`;
+    if (S.sched[key] && S.sched[key].bookingId === b.id) delete S.sched[key];
+  }
+}
+function syncPlayerReservationFromVenue(b) {
+  if (!b || !b.sourceReservationId) return;
+  const r = S.my.find(x => x.id === b.sourceReservationId);
+  if (!r) return;
+  r.c = b.court; r.h = b.hour; r.d = b.day; r.dur = b.dur; r.total = b.amt;
+  if (b.status === 'cancel') r.status = 'cancel';
+}
+
+/* ---------- Court diagram ---------- */
+function courtSVG(a, b) {
+  const P = (x, y, i, team) => {
+    const you = i === ME;
+    return `<g>
+      <circle cx="${x}" cy="${y}" r="22" fill="${team ? '#FFFFFF' : '#F2D43B'}" stroke="${you ? '#3E8E5E' : (team ? '#163C6A' : '#7A6A00')}" stroke-width="${you ? 5 : 2}"/>
+      <text x="${x}" y="${y + 5}" text-anchor="middle" font-size="15" font-weight="750" fill="${team ? '#163C6A' : '#2E2700'}" font-family="Archivo,system-ui,sans-serif">${ini(i)}</text>
+    </g>`;
+  };
+  const label = `Court diagram: ${a.map(i => PLAYERS[i]).join(' and ')} versus ${b.map(i => PLAYERS[i]).join(' and ')}`;
+  return `<svg class="court" viewBox="0 0 460 220" role="img" aria-label="${label}">
+    <rect width="460" height="220" rx="14" fill="#163C6A"/>
+    <rect x="10" y="10" width="440" height="200" fill="#1D4E89"/>
+    <rect x="160" y="10" width="140" height="200" fill="#3E8E5E"/>
+    <g stroke="#fff" stroke-width="3" fill="none"><rect x="10" y="10" width="440" height="200"/><path d="M160 10v200M300 10v200M10 110h150M300 110h150"/></g>
+    <path d="M230 2v216" stroke="#0B1626" stroke-width="6"/>
+    <path d="M230 2v216" stroke="#fff" stroke-width="1.5" stroke-dasharray="4 4" opacity=".55"/>
+    ${P(85, 60, a[0], 0)}${P(85, 160, a[1], 0)}${P(375, 60, b[0], 1)}${P(375, 160, b[1], 1)}
+  </svg>`;
+}
+function courtCard(g, wide) {
+  return `<div class="courtbox">
+    <div class="ch"><div><h3>Court ${g.c}</h3><p>Game ${g.game}, ${g.t} played</p></div><div class="score" aria-label="Score ${g.sa} to ${g.sb}">${g.sa}–${g.sb}</div></div>
+    ${courtSVG(g.a, g.b)}
+    <div class="teams">
+      <div><b><span class="teamdot" style="background:#F2D43B"></span>Yellow side</b>${g.a.map(first).join(' & ')}</div>
+      <div><b><span class="teamdot" style="background:#fff;border:1.5px solid #163C6A"></span>White side</b>${g.b.map(first).join(' & ')}</div>
+    </div>
+  </div>`;
+}
+
+/* ---------- Player screens ---------- */
+function nextCard(b) {
+  return `<div class="next">
+    <p class="where">${VENUES[b.v]}</p>
+    <p class="when">${DAYS[b.d].dow} ${DAYS[b.d].d}, ${fmtH(b.h)}</p>
+    <p>Court ${b.c} for ${b.dur} hr, ${peso(b.total)} paid</p>
+    <div class="row">
+      <button class="pill-btn light" data-act="directions" data-v="${b.v}">Get directions</button>
+      <button class="pill-btn ghost" data-act="tab" data-v="book">See all bookings</button>
+    </div>
+  </div>`;
+}
+function miniSess(s) {
+  const left = s.cap - s.roster.length - (S.joined.has(s.id) ? 1 : 0);
+  return `<button class="mini" data-act="sess" data-v="${s.id}">
+    <span class="muted">${s.day}</span>
+    <span class="tm">${s.time}</span>
+    <h3>${s.venue}</h3>
+    <span class="muted">${s.level}, ${peso(s.fee)}</span>
+    <div class="spots" style="width:100%"><div class="bar ${left <= 4 ? 'tight' : ''}"><i style="width:${Math.min(100, (s.cap - left) / s.cap * 100)}%"></i></div>${left > 0 ? left + ' left' : 'Full'}</div>
+  </button>`;
+}
+function homeScreen() {
+  const sorted = [...S.my].sort((x, y) => x.d - y.d || x.h - y.h);
+  const j = SESSIONS.find(s => S.joined.has(s.id));
+  return `<div class="pg home">
+    ${j ? `<button class="note note-top" data-act="tab" data-v="lineups">You’re in ${j.venue} open play ${j.day.toLowerCase()}. Check Lineups for your court.</button>` : ''}
+    <section class="h-next"><h2 class="sec">Your next booking</h2>
+    ${sorted.length ? nextCard(sorted[0]) : `<div class="empty">No courts booked yet.<br><button data-act="tab" data-v="book">Reserve a court</button></div>`}</section>
+
+    <section class="h-open"><h2 class="sec">Open play near you <button class="link" data-act="tab" data-v="open">See all</button></h2>
+    <div class="hs">${SESSIONS.map(miniSess).join('')}</div></section>
+</div>`;
+}
+function openScreen() {
+  const F = ['All', 'Beginner', 'Intermediate', 'Advanced'];
+  const list = SESSIONS.filter(s => S.filter === 'All' || s.level === S.filter);
+  const days = [...new Set(list.map(s => s.day))];
+  return `<div class="pg opn">
+    <div class="chips" role="group" aria-label="Skill level">${F.map(f => `<button class="chip" data-act="filter" data-v="${f}" aria-pressed="${S.filter === f}">${f === 'All' ? 'All levels' : f}</button>`).join('')}</div>
+    ${days.length ? days.map(d => `<section class="dg"><h2 class="daygrp">${d}</h2><div class="sessgrid">` + list.filter(s => s.day === d).map(s => {
+      const n = s.roster.length, left = s.cap - n;
+      return `<button class="sess" data-act="sess" data-v="${s.id}">
+        <div class="sess-time"><b>${s.start}</b><span>${s.ampm}</span></div>
+        <div><h3>${s.venue}</h3><p>${s.level} (${s.range}), ${s.courts} courts</p>
+          <div class="spots"><div class="bar ${left <= 4 ? 'tight' : ''}"><i style="width:${Math.min(100, n / s.cap * 100)}%"></i></div>${left > 0 ? left + ' spots left' : 'Full'}</div></div>
+        <div><span class="fee">${peso(s.fee)}</span>${S.joined.has(s.id) ? '<span class="joined-tag">Joined</span>' : ''}</div>
+      </button>`;
+    }).join('') + '</div></section>').join('') : `<div class="empty" style="margin-top:16px">No ${S.filter.toLowerCase()} sessions this week.<br><button data-act="filter" data-v="All">Show all levels</button></div>`}</div>`;
+}
+function sessDetail(id) {
+  const s = SESSIONS.find(x => x.id === id);
+  const j = S.joined.has(id);
+  const n = s.roster.length + (j ? 1 : 0);
+  const live = s.id === 1;
+  const roster = j ? [ME, ...s.roster] : s.roster;
+  return `<div class="pg det"><div class="d-main">
+    <p class="muted">${s.day}, ${s.time}</p>
+    <div class="facts"><div><b>${peso(s.fee)}</b><span>Per player</span></div><div><b>${n}/${s.cap}</b><span>Players</span></div><div><b>${s.courts}</b><span>Courts</span></div></div>
+    <p class="muted" style="margin-top:12px">${s.level} play, ratings ${s.range}. Bring your own paddle; balls provided.</p>
+    ${j ? `<p class="note">You’re checked in. You’ll see your court in Lineups when it’s your turn.</p>` : ''}
+    </div><div class="d-side">
+    <h2 class="sec">Players</h2>
+    <div class="empty">${n ? `${n} player${n===1?'':'s'} signed up.` : 'No players have joined yet.'}</div>
+    <h2 class="sec">Who’s playing <span class="muted">${n} joined</span></h2>
+    <div class="card" style="display:flex;flex-wrap:wrap;gap:8px">${roster.slice(0, 18).map(av).join('')}${roster.length > 18 ? `<span class="av" style="background:var(--line);color:var(--ink2)">+${roster.length - 18}</span>` : ''}</div></div></div>`;
+}
+function lineupsScreen() {
+  const joined = SESSIONS.filter(x => S.joined.has(x.id));
+  return `<div class="pg lin"><h2 class="sec">Your open play sessions</h2>${joined.length ? joined.map(x => `<div class="card" style="margin-bottom:12px"><h3>${x.venue}</h3><p class="muted">${x.day}, ${x.time}</p><p>${x.roster.length} other players signed up</p></div>`).join('') : '<div class="empty">You haven’t joined an open play session yet.</div>'}</div>`;
+}
+
+function bookScreen() {
+  const v = S.venue, d = S.day;
+  let cells = '';
+  HOURS.forEach(h => {
+    cells += `<div class="gt">${fmtH(h)}</div>`;
+    for (let c = 1; c <= 4; c++) {
+      const isMine = mine(v, d, c, h);
+      const t = !isMine && taken(v, d, c, h);
+      const sel = S.sel && S.sel.c === c && h >= S.sel.h && h < S.sel.h + S.dur;
+      const cls = isMine ? 'mine' : t ? 'taken' : sel ? 'sel' : '';
+      const lbl = `Court ${c} at ${fmtH(h)}: ${isMine ? 'your booking' : t ? 'unavailable' : sel ? 'selected' : 'available, ' + peso(price(h))}`;
+      cells += `<button class="slot ${cls}" ${t || isMine ? 'disabled' : ''} data-act="slot" data-v="${c}-${h}" aria-label="${lbl}">${isMine ? 'Yours' : sel ? '✓' : t ? '' : peso(price(h))}</button>`;
+    }
+  });
+  const total = S.sel ? Array.from({ length: S.dur }, (_, i) => price(S.sel.h + i)).reduce((a, b) => a + b, 0) : 0;
+  const myList = [...S.my].sort((x, y) => x.d - y.d || x.h - y.h);
+  return `<div class="pg bkpage"><div class="b-main">
+    <div class="chips" role="group" aria-label="Venue">${VENUES.map((n, i) => `<button class="chip" data-act="venue" data-v="${i}" aria-pressed="${S.venue === i}">${n}</button>`).join('')}</div>
+    <div class="dates" role="group" aria-label="Date" style="margin-top:10px">${DAYS.map((x, i) => `<button class="date" data-act="day" data-v="${i}" aria-pressed="${S.day === i}"><small>${i === 0 ? 'Today' : x.dow}</small><b>${x.d}</b></button>`).join('')}</div>
+    <div class="optrow"><span class="muted">Length</span><div class="seg" role="group" aria-label="Booking length">${[1, 2].map(n => `<button data-act="dur" data-v="${n}" aria-pressed="${S.dur === n}">${n} hour${n > 1 ? 's' : ''}</button>`).join('')}</div></div>
+    <div class="gridcard"><div class="grid" role="group" aria-label="Court times"><div></div>${[1,2,3,4].map(c => `<div class="gh">Court ${c}</div>`).join('')}${cells}</div>
+    <div class="legend"><span><i></i>Open</span><span><i class="t"></i>Taken</span><span><i class="s"></i>Selected</span><span><i class="m"></i>Yours</span></div>
+    <p class="muted" style="margin-top:6px">Prices are per court per hour. Evenings from 5 PM cost more.</p></div></div>
+    <div class="b-aside"><div class="b-side">
+    <h2 class="sec">My bookings</h2>
+    <div class="list">${myList.map(b => `<div class="ri"><span class="st ${b.status === 'cancel' ? 'cancel' : 'booked'}">Court ${b.c}</span><div class="grow"><h3>${DAYS[b.d].dow} ${DAYS[b.d].d}, ${fmtH(b.h)}</h3><p>${VENUES[b.v]}, ${b.dur} hr${b.status === 'cancel' ? ' · Cancelled' : ''}</p></div><span class="fee">${peso(b.total)}</span>${b.status === 'cancel' ? '' : `<button class="txtbtn" data-act="editbooking" data-v="${b.id}">Edit</button><button class="txtbtn" data-act="deletebooking" data-v="${b.id}">Cancel</button>`}</div>`).join('') || '<p class="muted" style="padding:14px 0">No bookings yet.</p>'}</div></div>
+    ${S.sel ? `<div class="sumbar"><div class="grow"><b>Court ${S.sel.c}, ${DAYS[d].dow} ${DAYS[d].d}</b><p class="muted">${fmtH(S.sel.h)} for ${S.dur} hr, ${peso(total)}</p></div><button class="btn primary" data-act="reserve">Reserve court</button></div>` : ''}</div></div>`;
+}
+
+/* ---------- Venue (business) screens ---------- */
+function dashScreen() {
+  const active = S.bookings.filter(b => b.status === 'up');
+  const revenue = active.filter(b => b.paid).reduce((sum,b) => sum + Number(b.amt || 0), 0);
+  const unpaid = active.filter(b => !b.paid).length;
+  const usedCourts = Object.values(S.sched).filter(x => x && (x.t === 'b' || x.t === 'o')).length;
+  const todayBookings = active.filter(b => b.day === S.bizDay).length;
+  return `<div class="pg dash"><section class="x-rev"><div class="rev">
+    <p class="muted">Recorded paid revenue</p><p class="big">${peso(revenue)}</p>
+    <p class="delta">Based on bookings marked as paid</p>
+  </div></section>
+  <section class="x-stats"><div class="stats"><div><b>${active.length}</b><span>Active bookings</span></div><div><b>${unpaid}</b><span>Unpaid</span></div><div><b>${todayBookings}</b><span>Today's bookings</span></div></div></section>
+  <section class="x-now"><h2 class="sec">Schedule <button class="link" data-act="tab" data-v="sched">Open schedule</button></h2><div class="list">${todayBookings ? active.filter(b => b.day === S.bizDay).sort((a,b) => a.hour-b.hour).slice(0,4).map(bookingRow).join('') : '<p class="muted" style="padding:14px 0">No bookings scheduled for today yet.</p>'}</div></section>
+  <section class="x-up"><h2 class="sec">Coming up <button class="link" data-act="tab" data-v="bookings">All bookings</button></h2><div class="list">${active.slice(0,3).map(bookingRow).join('') || '<p class="muted" style="padding:14px 0">No bookings yet.</p>'}</div></section></div>`;
+}
+
+function schedScreen() {
+  const d = S.bizDay;
+  let cells = '';
+  HOURS.forEach(h => {
+    cells += `<div class="gt">${fmtH(h)}</div>`;
+    for (let c = 1; c <= 4; c++) {
+      const x = bizCell(d, c, h);
+      const txt = x.t === 'b' ? x.who.split(' ')[0] : x.t === 'o' ? 'Open play' : x.t === 'mt' ? 'Repair' : '';
+      cells += `<button class="slot ${x.t}" data-act="bslot" data-v="${c}-${h}" aria-label="Court ${c} at ${fmtH(h)}: ${x.t === 'b' ? 'booked by ' + x.who : x.t === 'o' ? 'open play' : x.t === 'mt' ? 'blocked for maintenance' : 'free'}">${txt}</button>`;
+    }
+  });
+  let used = 0, all = 0;
+  HOURS.forEach(h => { for (let c = 1; c <= 4; c++) { all++; if (bizCell(d, c, h).t === 'b' || bizCell(d, c, h).t === 'o') used++; } });
+  return `<div class="pg sch"><div class="s-top">
+    <div class="dates" role="group" aria-label="Date">${DAYS.map((x, i) => `<button class="date" data-act="bday" data-v="${i}" aria-pressed="${S.bizDay === i}"><small>${i === 0 ? 'Today' : x.dow}</small><b>${x.d}</b></button>`).join('')}</div></div><div class="s-info">
+    <p class="muted" style="margin-top:12px">${used} of ${all} court hours filled. Tap a time to add a walk-in, block a court or see a booking.</p></div><div class="s-main gridcard">
+    <div class="grid sgrid"><div></div>${[1,2,3,4].map(c => `<div class="gh">Court ${c}</div>`).join('')}${cells}</div></div><div class="s-legend">
+    <div class="legend"><span><i class="b"></i>Booked</span><span><i class="o"></i>Open play</span><span><i class="mt"></i>Maintenance</span><span><i></i>Free</span></div></div></div>`;
+}
+function bizOpenScreen() {
+  const mineS = SESSIONS;
+  return `<div class="pg bop">
+    <button class="btn dark ic" data-act="sheet" data-v="create">${ic('plus')}Create open play session</button>
+    <h2 class="sec">Sessions</h2>
+    ${mineS.length ? mineS.map(s => {
+      const open = S.bizOpen === s.id;
+      const isLive = false;
+      const count = S.checked.size;
+      return `<div class="bsess">
+        <button class="bsess-head" data-act="bopen" data-v="${s.id}" aria-expanded="${open}">
+          <div class="grow"><h3>${s.day}, ${s.time}</h3><p class="muted">${s.level}, ${s.roster.length}/${s.cap} signed up, ${peso(s.fee)}</p>
+          ${isLive ? `<div class="spots"><div class="bar"><i style="width:${count / s.roster.length * 100}%"></i></div>${count} of ${s.roster.length} checked in</div>` : ''}</div>
+          ${isLive ? '<span class="st play">Live</span>' : '<span class="st free">Upcoming</span>'}
+        </button>
+        ${open ? `<div class="bsess-body">
+          <p class="muted" style="margin-top:12px">${s.roster.length} players signed up.</p>
+          <div class="row" style="margin-top:12px"><button class="btn line" data-act="editsess" data-v="${s.id}">Edit session</button><button class="btn line" data-act="deletesess" data-v="${s.id}">Delete session</button></div>
+        </div>` : ''}
+      </div>`;
+    }).join('') : '<div class="empty">No sessions yet. Create your first open play session.</div>'}</div>`;
+}
+function bookingRow(b) {
+  const tbl = S.mode === 'business' && S.tab.business === 'bookings';
+  const st = b.status === 'cancel' ? '<span class="st cancel">Cancelled</span>' : b.paid ? '<span class="st booked">Paid</span>' : '<span class="st unpaid">Unpaid</span>';
+  const acts = b.status === 'up' ? `${!b.paid ? `<button class="btn primary small" data-act="paid" data-v="${b.id}">Mark paid</button>` : ''}<button class="txtbtn" data-act="editb" data-v="${b.id}">Edit</button><button class="txtbtn" data-act="cancelb" data-v="${b.id}">Cancel</button><button class="txtbtn" data-act="deleteb" data-v="${b.id}">Delete</button>` : `<button class="txtbtn" data-act="deleteb" data-v="${b.id}">Delete</button>`;
+  return `<div class="ri bk${tbl ? ' bk-t' : ''}">
+    <div class="grow"><h3>${b.who}</h3><p>${b.venue ? b.venue + " · " : ""}Court ${b.court}, ${b.when}, ${b.dur} hr</p></div>
+    <div class="bk-amt"><div class="fee">${peso(b.amt)}</div>${st}</div>
+    ${tbl ? `<div class="acts">${acts}</div>` : ''}
+  </div>`;
+}
+function bookingsScreen() {
+  const F = [['up', 'Upcoming'], ['unpaid', 'Unpaid'], ['cancel', 'Cancelled']];
+  const list = S.bookings.filter(b => S.bfilter === 'up' ? b.status === 'up' : S.bfilter === 'unpaid' ? b.status === 'up' && !b.paid : b.status === 'cancel');
+  return `<div class="pg bks">
+    <div class="seg" role="group" aria-label="Booking filter">${F.map(([k, l]) => `<button data-act="bfilter" data-v="${k}" aria-pressed="${S.bfilter === k}">${l}</button>`).join('')}</div>
+    <div class="list" style="margin-top:14px">${list.length ? '<div class="tbl-h" aria-hidden="true"><span>Booking</span><span>Amount and status</span><span>Actions</span></div>' + list.map(bookingRow).join('') : `<p class="muted" style="padding:16px 0">${S.bfilter === 'unpaid' ? 'No unpaid bookings.' : 'No bookings in this section yet.'}</p>`}</div></div>`;
+}
+
+/* ---------- Sheets ---------- */
+function sheetHTML() {
+  const sh = S.sheet; if (!sh) return '';
+  let body = '';
+  if (sh.type === 'profile') {
+    const biz = S.mode === 'business';
+    body = biz
+      ? `<h2>Venue account</h2><p class="muted">Manage your venue schedule and bookings</p>
+         <div class="stack-btns"><button class="btn dark" data-act="mode" data-v="player">Switch to player app</button><button class="btn line" data-act="close">Close</button></div>`
+      : `<div style="display:flex;gap:12px;align-items:center;margin-bottom:6px"><span class="avatar" style="width:52px;height:52px;font-size:18px">P</span><div><h2>Player account</h2><p class="muted" style="margin:0">Your bookings and open play sessions</p></div></div>
+         <div class="stack-btns" style="margin-top:16px"><button class="btn dark" data-act="mode" data-v="business">Switch to venue app</button><button class="btn line" data-act="close">Close</button></div>`;
+  }
+  if (sh.type === 'profile') body = body.replace('<div class="stack-btns"', `<div class="field"><span>Appearance</span><div class="seg" role="group" aria-label="Appearance">${[['auto', 'Auto'], ['light', 'Light'], ['dark', 'Dark']].map(([k, l]) => `<button data-act="theme" data-v="${k}" aria-pressed="${S.theme === k}">${l}</button>`).join('')}</div></div><div class="stack-btns"`);
+  if (sh.type === 'bslot') {
+    const x = bizCell(S.bizDay, sh.c, sh.h);
+    const when = `${S.bizDay === 0 ? 'Today' : DAYS[S.bizDay].dow + ' ' + DAYS[S.bizDay].d}, ${fmtH(sh.h)}`;
+    if (x.t === 'f') body = `<h2>Court ${sh.c} is free</h2><p class="muted">${when}</p>
+      <label class="field"><span>Customer name</span><input id="walkin-name" placeholder="Enter customer name" required></label>
+      <label class="field"><span>Amount (₱)</span><input id="walkin-amt" type="number" min="0" value="${price(sh.h)}"></label>
+      <div class="stack-btns"><button class="btn primary" data-act="walkin">Save booking</button><button class="btn line" data-act="block">Block for maintenance</button></div>`;
+    else if (x.t === 'b') body = `<h2>${x.who}</h2><p class="muted">Court ${sh.c}, ${when}, ${peso(price(sh.h))}</p>
+      <div class="stack-btns"><button class="btn line" data-act="toast" data-v="No messaging service is connected yet.">Send reminder</button><button class="btn line" style="color:var(--danger)" data-act="freeslot">Cancel booking</button></div>`;
+    else if (x.t === 'o') body = `<h2>Open play</h2><p class="muted">Court ${sh.c}, ${when}. Manage players in the Open play tab.</p>
+      <div class="stack-btns"><button class="btn dark" data-act="tab" data-v="bizopen">Go to open play</button></div>`;
+    else body = `<h2>Court ${sh.c} is blocked</h2><p class="muted">${when}, maintenance</p>
+      <div class="stack-btns"><button class="btn primary" data-act="freeslot">Reopen court</button></div>`;
+  }
+  if (sh.type === 'create') {
+    body = `<h2>New open play session</h2><p class="muted">Players can join from the app once you create it.</p>
+      <label class="field"><span>Day</span><select id="f-day">${DAYS.map((d,i) => `<option value="${i}" ${i===1?'selected':''}>${i===0?'Today':d.dow+' '+d.d+' '+d.mon}</option>`).join('')}</select></label>
+      <div class="two">
+        <label class="field"><span>Starts</span><select id="f-start">${HOURS.map(h => `<option value="${h}" ${h === 18 ? 'selected' : ''}>${fmtH(h)}</option>`).join('')}</select></label>
+        <label class="field"><span>Hours</span><select id="f-len"><option>2</option><option selected>3</option><option>4</option></select></label>
+      </div>
+      <label class="field"><span>Skill level</span><select id="f-level"><option>All levels</option><option>Beginner</option><option selected>Intermediate</option><option>Advanced</option></select></label>
+      <div class="two">
+        <label class="field"><span>Player limit</span><input id="f-cap" type="number" inputmode="numeric" value="24" min="4"></label>
+        <label class="field"><span>Fee per player (₱)</span><input id="f-fee" type="number" inputmode="numeric" value="150" min="0"></label>
+      </div>
+      <div class="stack-btns"><button class="btn primary" data-act="create">Create session</button><button class="btn line" data-act="close">Cancel</button></div>`;
+  }
+  return `<div class="scrim" data-act="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" tabindex="-1"><div class="grab"></div>${body.replace('<h2>', '<h2 id="sheet-title">')}</div></div>`;
+}
+
+/* ---------- Layout ---------- */
+const PTABS = [['home', 'Home', 'home'], ['open', 'Open play', 'paddle'], ['book', 'Book', 'cal'], ['lineups', 'Lineups', 'lineup']];
+const BTABS = [['dash', 'Dashboard', 'chart'], ['sched', 'Schedule', 'clock'], ['bizopen', 'Open play', 'users'], ['bookings', 'Bookings', 'receipt']];
+const TITLES = { home: 'Welcome', open: 'Open play', book: 'Book a court', lineups: 'Lineups', dash: 'Dashboard', sched: 'Schedule', bizopen: 'Open play', bookings: 'Bookings' };
+
+function header() {
+  const tab = S.tab[S.mode];
+  if (S.view) {
+    const s = SESSIONS.find(x => x.id === S.view.id);
+    if (!s) { S.view = null; return header(); }
+    return `<header class="hdr sub"><button class="iconbtn" data-act="back" aria-label="Back">${ic('back')}</button><div class="t"><h1>${s.venue}</h1><p>${s.level} open play</p></div></header>`;
+  }
+  const sub = S.mode === 'business' ? 'Venue management' : tab === 'home' ? 'Thursday, October 29' : '';
+  const initials = S.mode === 'business' ? 'V' : 'P';
+  return `<header class="hdr"><div class="t"><h1>${TITLES[tab]}</h1>${sub ? `<p>${sub}</p>` : ''}</div><button class="avatar" data-act="sheet" data-v="profile" aria-label="Account and app switcher">${S.mode === 'business' ? 'V' : 'P'}</button></header>`;
+}
+function screen() {
+  if (S.view) return SESSIONS.some(x => x.id === S.view.id) ? sessDetail(S.view.id) : '<div class="empty">Session not found.</div>';
+  return ({ home: homeScreen, open: openScreen, book: bookScreen, lineups: lineupsScreen, dash: dashScreen, sched: schedScreen, bizopen: bizOpenScreen, bookings: bookingsScreen })[S.tab[S.mode]]();
+}
+function footer() {
+  const biz = S.mode === 'business';
+  const tabs = biz ? BTABS : PTABS;
+  const nav = `<nav class="tabbar" aria-label="Main">
+    <div class="brand"><span class="logo">${ic('paddle')}</span><div class="t"><b>Courtside</b><small>${biz ? 'Venue app' : 'Player app'}</small></div></div>
+    <div class="modes" role="group" aria-label="Which side of the app">${[['player', 'Player'], ['business', 'Venue']].map(([k, l]) => `<button data-act="mode" data-v="${k}" aria-pressed="${S.mode === k}">${l}<span class="x"> app</span></button>`).join('')}</div>
+    <div class="tabs">${tabs.map(([k, l, i]) => `<button class="tab" data-act="tab" data-v="${k}" ${S.tab[S.mode] === k ? 'aria-current="page"' : ''}>${ic(i)}${l}</button>`).join('')}</div>
+    <button class="acct" data-act="sheet" data-v="profile" aria-label="Account and app switcher"><span class="avatar">${biz ? 'V' : 'P'}</span><span class="t"><b>${biz ? 'Your venue' : 'Your account'}</b><small>${biz ? 'Venue manager' : 'Player account'}</small></span></button>
+  </nav>`;
+  if (!S.view) return nav;
+  const s = SESSIONS.find(x => x.id === S.view.id);
+  const j = S.joined.has(s.id);
+  const full = s.roster.length >= s.cap;
+  return nav + `<div class="ctabar">${j ? `<button class="btn line" data-act="leave" data-v="${s.id}">Leave session</button>` : full ? `<button class="btn line" disabled>Session is full</button>` : `<button class="btn primary" data-act="join" data-v="${s.id}">Join for ${peso(s.fee)}</button>`}</div>`;
+}
+
+let lastKey = '', lastSheet = false, openerKey = '', rendered = false;
+const keyOf = el => el && el.dataset && el.dataset.act ? el.dataset.act + '|' + (el.dataset.v ?? '') : '';
+function render() {
+  saveState();
+  const app = document.getElementById('app');
+  const sc = document.getElementById('scroll');
+  const key = S.mode + S.tab[S.mode] + (S.view ? 'v' + S.view.id : '');
+  const changed = key !== lastKey;
+  const keep = !changed && sc ? sc.scrollTop : 0;
+  const fk = keyOf(document.activeElement);
+  const shell = document.getElementById('shell');
+  shell.classList.toggle('biz', S.mode === 'business');
+  shell.classList.toggle('sub', !!S.view);
+  app.innerHTML = header() + `<main class="scroll" id="scroll" tabindex="-1">${screen()}</main>` + footer() + sheetHTML() +
+    (S.toast ? `<div class="toast" aria-hidden="true">${ic('check')}<span>${S.toast}</span></div>` : '');
+  const nsc = document.getElementById('scroll');
+  nsc.scrollTop = keep;
+  app.querySelectorAll('.hdr,.scroll,.tabbar,.ctabar').forEach(e => { e.inert = !!S.sheet; });
+  const m = document.querySelector('meta[name="theme-color"]');
+  if (m) m.content = getComputedStyle(document.documentElement).getPropertyValue(S.mode === 'business' ? '--court' : '--surface').trim() || m.content;
+  /* keep keyboard focus where the person was; move it into dialogs and back out */
+  const find = k => k ? [...app.querySelectorAll('[data-act]')].find(e => keyOf(e) === k && e.getClientRects().length) : null;
+  let target = null;
+  if (S.sheet) target = lastSheet ? find(fk) || app.querySelector('.sheet') : app.querySelector('.sheet');
+  else target = lastSheet ? find(openerKey) : find(fk);
+  if (!target && rendered && changed && !S.sheet) target = nsc;
+  if (target) target.focus({ preventScroll: true });
+  lastSheet = !!S.sheet; lastKey = key; rendered = true;
+}
+let toastTimer;
+function toast(msg) {
+  S.toast = msg; clearTimeout(toastTimer);
+  const live = document.getElementById('live'); live.textContent = msg;
+  toastTimer = setTimeout(() => { S.toast = null; live.textContent = ''; const t = document.querySelector('.toast'); if (t) t.remove(); }, 2600);
+}
+
+/* ---------- Actions ---------- */
+const A = {
+  theme: v => { S.theme = v; applyTheme(); try { localStorage.setItem('courtside-theme', v); } catch (e) {} },
+  mode: v => { S.mode = v; S.view = null; S.sheet = null; },
+  tab: v => {
+    S.view = null; S.sheet = null;
+    if (BTABS.some(t => t[0] === v)) S.mode = 'business'; else S.mode = 'player';
+    S.tab[S.mode] = v; lastKey = '';
+  },
+  sess: v => { S.view = { id: +v }; S.mode = 'player'; },
+  back: () => { S.view = null; },
+  filter: v => { S.filter = v; },
+  join: v => {
+    const s = SESSIONS.find(x => x.id === +v); if (!s) return;
+    if (s.roster.length + (S.joined.has(s.id)?0:1) >= s.cap) { toast('This session is full.'); return; }
+    S.joined.add(+v);
+    s.roster = Array.isArray(s.roster) ? s.roster : [];
+    if (!s.roster.some(p => p && p.playerId === 'current-player')) s.roster.push({ playerId: 'current-player', name: 'Player', joinedAt: Date.now(), checkedIn: false });
+    toast(`Joined ${s.venue} open play.`);
+  },
+  leave: v => {
+    S.joined.delete(+v);
+    const s = SESSIONS.find(x => x.id === +v);
+    if (s && Array.isArray(s.roster)) s.roster = s.roster.filter(p => !p || p.playerId !== 'current-player');
+    toast('You left the session. Your fee will be refunded.');
+  },
+  venue: v => { S.venue = +v; S.sel = null; },
+  day: v => { S.day = +v; S.sel = null; },
+  dur: v => {
+    S.dur = +v;
+    if (S.sel && !fits(S.sel.c, S.sel.h)) { S.sel = null; toast('That time doesn’t fit 2 hours. Pick another slot.'); }
+  },
+  slot: v => {
+    const [c, h] = v.split('-').map(Number);
+    if (S.sel && S.sel.c === c && S.sel.h === h) { S.sel = null; return; }
+    if (!fits(c, h)) { toast(`Court ${c} isn’t free for ${S.dur} hours from ${fmtH(h)}.`); return; }
+    S.sel = { c, h };
+  },
+  reserve: () => {
+    const { c, h } = S.sel;
+    const total = Array.from({ length: S.dur }, (_, i) => price(h + i)).reduce((a, b) => a + b, 0);
+    const id = Date.now();
+    S.my.push({ id, v: S.venue, d: S.day, c, h, dur: S.dur, total, status: 'up' });
+    S.bookings.push({ id, sourceReservationId: id, source: 'player', venue: VENUES[S.venue], who: 'Player booking', court: c, day: S.day, hour: h, when: `${DAYS[S.day].dow} ${DAYS[S.day].d}, ${fmtH(h)}`, amt: total, paid: false, status: 'up', dur: S.dur });
+    for (let i = 0; i < S.dur; i++) S.sched[`${S.day}-${c}-${h+i}`] = { t: 'b', who: 'Player booking', bookingId: id };
+    toast(`Court reserved: Court ${c}, ${DAYS[S.day].dow} ${DAYS[S.day].d} at ${fmtH(h)}`);
+    S.sel = null;
+  },
+  sheet: v => { S.sheet = { type: v }; },
+  close: () => { S.sheet = null; },
+  scrim: (v, el, e) => { if (e.target === el) S.sheet = null; else return 'skip'; },
+  toast: v => { S.sheet = null; toast(v); },
+  directions: v => { const venue = VENUES[+v] || 'venue'; const q = encodeURIComponent(venue); window.open(`https://www.google.com/maps/search/?api=1&query=${q}`, '_blank', 'noopener'); },
+  bday: v => { S.bizDay = +v; },
+  bslot: v => { const [c, h] = v.split('-').map(Number); S.sheet = { type: 'bslot', c, h }; },
+  walkin: () => { const { c, h } = S.sheet; const who = (document.getElementById('walkin-name')?.value || '').trim(); const amt = Math.max(0, Number(document.getElementById('walkin-amt')?.value || price(h))); if (!who) { toast('Enter the customer name first.'); return; } const id = Date.now(); S.bookings.push({ id, who, court:c, day:S.bizDay, hour:h, when:`${DAYS[S.bizDay].dow} ${DAYS[S.bizDay].d}, ${fmtH(h)}`, amt, paid:false, status:'up', dur:1 }); S.sched[`${S.bizDay}-${c}-${h}`] = { t:'b', who, bookingId:id }; S.sheet = null; toast(`Booking added for ${who}.`); },
+  block: () => { const { c, h } = S.sheet; S.sched[`${S.bizDay}-${c}-${h}`] = { t: 'mt' }; S.sheet = null; toast(`Court ${c} blocked at ${fmtH(h)}`); },
+  freeslot: () => { const { c, h } = S.sheet; const key = `${S.bizDay}-${c}-${h}`; const booking = S.bookings.find(b => b.status === 'up' && b.day === S.bizDay && b.court === c && b.hour === h); if (booking) { booking.status = 'cancel'; clearBookingSchedule(booking); syncPlayerReservationFromVenue(booking); } delete S.sched[key]; S.sheet = null; toast(`Court ${c} is now available at ${fmtH(h)}`); },
+  bopen: v => { S.bizOpen = S.bizOpen === +v ? null : +v; },
+  create: () => {
+    const g = id => document.getElementById(id).value;
+    const h = +g('f-start'), len = +g('f-len');
+    const end = h + len;
+    if (!Number.isFinite(h) || h + len > 22) { toast('Choose a valid session time.'); return; }
+    const s = {
+      id: Date.now(), venue: 'Rally House', day: DAYS[+g('f-day')] ? ( +g('f-day') === 0 ? 'Today' : DAYS[+g('f-day')].dow + ' ' + DAYS[+g('f-day')].d ) : 'Today', dateIndex: +g('f-day'),
+      start: `${(h % 12) || 12}:00`, ampm: h < 12 ? 'AM' : 'PM',
+      time: `${(h % 12) || 12}:00–${(end % 12) || 12}:00 ${end < 12 || end === 24 ? 'AM' : 'PM'}`,
+      level: g('f-level'), range: { 'All levels': 'Open to everyone', Beginner: '2.0–3.0', Intermediate: '3.0–4.0', Advanced: '4.0+' }[g('f-level')],
+      fee: Math.max(0, +g('f-fee') || 0), cap: Math.max(4, +g('f-cap') || 4), courts: 3, roster: []
+    };
+    SESSIONS.push(s); S.bizOpen = s.id; S.sheet = null;
+    toast('Session created. Players can join it now.');
+  },
+  editsess: v => { const x = SESSIONS.find(a => a.id === +v); if (!x) return; const name = prompt('Session venue', x.venue); if (name === null) return; const fee = prompt('Fee per player (PHP)', x.fee); if (fee === null) return; const cap = prompt('Player limit', x.cap); if (cap === null) return; x.venue = name.trim() || x.venue; x.fee = Math.max(0, Number(fee)||0); x.cap = Math.max(1, Number(cap)||x.cap); toast('Session updated.'); },
+  deletesess: v => { if (!confirm('Delete this session? Players who joined will be removed.')) return; SESSIONS = SESSIONS.filter(x => x.id !== +v); S.joined.delete(+v); if (S.view?.id === +v) S.view = null; toast('Session deleted.'); },
+  editb: v => { const b = S.bookings.find(x => x.id === +v); if (!b) return; const who = prompt('Customer name', b.who); if (who === null) return; const amt = prompt('Booking amount (PHP)', b.amt); if (amt === null) return; const court = prompt('Court number', b.court); if (court === null) return; clearBookingSchedule(b); b.who = who.trim() || b.who; b.amt = Math.max(0, Number(amt)||0); b.court = Math.max(1, Number(court)||b.court); for(let i=0;i<Math.max(1,b.dur);i++) S.sched[`${b.day}-${b.court}-${b.hour+i}`] = {t:'b',who:b.who,bookingId:b.id}; syncPlayerReservationFromVenue(b); toast('Booking updated.'); },
+  deleteb: v => { if (!confirm('Permanently delete this booking?')) return; const b = S.bookings.find(x => x.id === +v); if (b) { clearBookingSchedule(b); const r = S.my.find(x => x.id === b.sourceReservationId); if (r) r.status = 'cancel'; } S.bookings = S.bookings.filter(x => x.id !== +v); toast('Booking deleted.'); },
+  editbooking: v => { const b = S.my.find(x => x.id === +v); if (!b || b.status === 'cancel') return; const court = prompt('Court number (1–4)', b.c); if (court === null) return; const duration = prompt('Duration in hours (1 or 2)', b.dur); if (duration === null) return; const linked = S.bookings.find(x => x.sourceReservationId === b.id); if (linked) clearBookingSchedule(linked); b.c = Math.min(4, Math.max(1, Number(court)||b.c)); b.dur = Math.min(2, Math.max(1, Number(duration)||b.dur)); b.total = Array.from({length:b.dur},(_,i)=>price(b.h+i)).reduce((a,x)=>a+x,0); if(linked){ linked.court=b.c; linked.dur=b.dur; linked.amt=b.total; for(let i=0;i<b.dur;i++) S.sched[`${b.d}-${b.c}-${b.h+i}`]={t:'b',who:linked.who,bookingId:linked.id}; } toast('Reservation updated. Venue schedule updated.'); },
+  deletebooking: v => { if (!confirm('Cancel this court reservation?')) return; const b = S.my.find(x => x.id === +v); if (!b) return; b.status = 'cancel'; const linked = S.bookings.find(x => x.sourceReservationId === b.id); if(linked){ linked.status='cancel'; clearBookingSchedule(linked); } toast('Reservation cancelled. Venue schedule updated.'); },
+  bfilter: v => { S.bfilter = v; },
+  paid: v => { S.bookings.find(b => b.id === +v).paid = true; toast('Marked as paid'); },
+  cancelb: v => { const b = S.bookings.find(x => x.id === +v); if (!b) return; b.status = 'cancel'; clearBookingSchedule(b); syncPlayerReservationFromVenue(b); toast(`Booking for ${b.who} cancelled`); }
+};
+function fits(c, h) {
+  for (let i = 0; i < S.dur; i++) {
+    const hh = h + i;
+    if (hh > 21 || taken(S.venue, S.day, c, hh) || mine(S.venue, S.day, c, hh)) return false;
+  }
+  return true;
+}
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (!el || el.disabled) return;
+  const fn = A[el.dataset.act];
+  if (!fn) return;
+  if (el.dataset.act === 'sheet' || el.dataset.act === 'bslot') openerKey = keyOf(el);
+  if (fn(el.dataset.v, el, e) === 'skip') return;
+  render();
+});
+try { S.theme = S.theme || localStorage.getItem('courtside-theme') || 'auto'; } catch (e) { S.theme = 'auto'; }
+function applyTheme() { if (S.theme === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', S.theme); }
+applyTheme();
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.sheet) { S.sheet = null; render(); } });
+render();
+</script>
+</body>
+</html>
