@@ -7,8 +7,10 @@ main                     production; only receives merges from develop
 └── develop              integration; what the next release will contain
     ├── be-main          backend line of work (apps/api)
     │   └── be-<topic>   backend features and fixes, e.g. be-open-play-queue
-    ├── fe-main          frontend line of work (apps/web)
-    │   └── fe-<topic>   frontend features and fixes, e.g. fe-venue-schedule
+    ├── fe-main          frontend line of work (apps/player, apps/venue, packages/*)
+    │   ├── fe-player-<topic>  player app work, e.g. fe-player-password-reset
+    │   ├── fe-venue-<topic>   venue app work, e.g. fe-venue-schedule
+    │   └── fe-<topic>         shared packages or both apps
     ├── docs/<topic>     documentation only
     └── chore/<topic>    tooling, CI, dependencies
 ```
@@ -51,7 +53,7 @@ CI runs the same steps against Postgres 16. A pull request needs:
 ## Code conventions
 
 - **API:** HTTP concerns go in `*.routes.ts` and rules in `*.service.ts`. Validate input with Zod through the `validate` middleware. Throw `HttpError` with a user-facing message and a stable `code`.
-- **Money:** store and send integer centavos. Format only at the edge (`peso()` in the web app).
-- **Time:** store UTC. Use the venue's time zone for hours, pricing and "today" (`lib/time.ts` in the API, `lib/format.ts` in the web app).
-- **Web:** fetch server data with TanStack Query and the `api()` client. Don't copy server data into component state. Feature code lives in `src/features/<area>/`, and shared pieces in `src/components/`.
+- **Money:** store and send integer centavos. Format only at the edge (`peso()` in `@courtside/client/format`).
+- **Time:** store UTC. Use the venue's time zone for hours, pricing and "today" (`lib/time.ts` in the API, `@courtside/client/format` in the web apps).
+- **Web:** fetch server data with TanStack Query and the `api()` client. Don't copy server data into component state. Feature code lives in each app's `src/features/<area>/`. Anything both apps use goes in `packages/client` (logic) or `packages/ui` (components); an app never imports from the other app.
 - **Style:** Prettier formats everything. Name things for what they mean to players and venues ("court", "session", "check-in").
