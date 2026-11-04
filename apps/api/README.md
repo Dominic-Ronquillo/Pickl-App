@@ -11,8 +11,7 @@ and venue side (dashboard, schedule, check-ins, bookings, scoring).
 cp .env.example .env            # set JWT_SECRET
 docker compose up -d            # Postgres on :5432
 npm install
-npm run db:migrate              # creates tables (name the first migration "init")
-npm run db:constraints          # adds the no-double-booking constraints
+npm run db:migrate              # creates tables and the no-double-booking constraints
 npm run db:seed                 # 3 venues, 4 courts each, one owner, 8 players
 npm run dev                     # http://localhost:4000/api
 ```
@@ -24,7 +23,7 @@ Seed logins (password `password123`): `owner@rallyhouse.test` (venue side), `and
 ```
 prisma/
   schema.prisma             data model
-  sql/001_no_overlap.sql    Postgres exclusion constraints (no overlapping bookings/blocks)
+  migrations/               SQL migrations, including the no-overlap exclusion constraints
   seed.ts
 src/
   server.ts                 HTTP + Socket.IO bootstrap
@@ -159,11 +158,13 @@ Connect with `io(URL, { auth: { token } })`, then emit `session:watch` with a se
 | `schedule:changed` | venue          | Anything that changes the schedule grid                     |
 | `queue:your-turn`  | user           | Player has been put on a court                              |
 
-## The queue (pending)
+## The open play queue
 
-The open play queue is isolated behind `src/modules/queue/queue.types.ts`. Open play calls `onCheckIn` / `onLeave`, games call `takeNextGroup` and `onGameEnded`, and lineups call `peekNextGroups`. Right now `queue.service.ts` provides a placeholder: lifecycle hooks do nothing, "Up next" is empty, and the queue endpoints return `501 QUEUE_NOT_READY`. Staff can still start games by choosing four checked-in players.
-
-To add the queue: add its tables to `schema.prisma`, implement `QueueStrategy`, and export it from `queue.service.ts`. No other module changes.
+Paddle-stack rotation, documented in [docs/queue-rules.md](../../docs/queue-rules.md). The rules are pure
+functions in `src/modules/queue/rotation.ts`; `queue.service.ts` stores each checked-in player's place in
+the `QueueEntry` table. Other modules talk to it only through `QueueStrategy` in `queue.types.ts`:
+open play calls `onCheckIn` / `onLeave`, games call `pickNextGroup`, `onGameStarted` and `onGameEnded`,
+and lineups call `peekNextGroups`.
 
 ## Still to decide
 
