@@ -85,3 +85,19 @@ export function estimateWaitMinutes(position: number, courts: number, waitingCou
   const spotsPerRotation = courts * (rotationMode(waitingCount, cfg) === 'FOUR_OFF' ? 4 : 2);
   return Math.floor((position - 1) / spotsPerRotation) * cfg.avgGameMinutes;
 }
+
+/**
+ * Wait estimate for each waiting player, consistent with the "Up next" groups:
+ * players already in a next group wait 0; everyone else waits at least one game, counted from
+ * their place among the players not yet grouped.
+ */
+export function estimateWaits(waiting: string[], upNext: string[], courts: number, cfg: RotationConfig) {
+  if (courts <= 0) return waiting.map(() => null);
+  const next = new Set(upNext);
+  let behind = 0;
+  return waiting.map((id) => {
+    if (next.has(id)) return 0;
+    behind += 1;
+    return estimateWaitMinutes(behind, courts, waiting.length, cfg)! + cfg.avgGameMinutes;
+  });
+}

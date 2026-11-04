@@ -4,6 +4,7 @@ import {
   decideAfterGame,
   DEFAULT_ROTATION,
   estimateWaitMinutes,
+  estimateWaits,
   previewGroups,
   rotationMode,
 } from './rotation.js';
@@ -102,5 +103,18 @@ describe('estimateWaitMinutes', () => {
 
   it('is null without courts', () => {
     expect(estimateWaitMinutes(1, 0, 1, cfg)).toBeNull();
+  });
+});
+
+describe('estimateWaits', () => {
+  it('matches "Up next": players already in a next group wait 0, the rest start after them', () => {
+    // 2 courts; one court has a winner staying, so the next groups take 3 + ... players
+    const waiting = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6'];
+    const upNext = ['w1', 'q1', 'q2', 'q3', 'w2', 'q4', 'w3', 'q5'];
+    expect(estimateWaits(waiting, upNext, 2, cfg)).toEqual([0, 0, 0, 0, 0, 15]);
+  });
+
+  it('is null without courts', () => {
+    expect(estimateWaits(['q1'], [], 0, cfg)).toEqual([null]);
   });
 });
