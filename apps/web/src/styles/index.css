@@ -1,0 +1,85 @@
+@import 'tailwindcss';
+
+/*
+ * Courtside design tokens, carried over from design/prototype.html.
+ * Court blue, kitchen green and ball yellow; Archivo; light and dark themes.
+ * Components use the Tailwind names below (bg-court, text-ink-2, border-line...).
+ */
+@theme {
+  --font-sans: 'Archivo', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --color-page: var(--cs-page);
+  --color-surface: var(--cs-surface);
+  --color-card: var(--cs-card);
+  --color-ink: var(--cs-ink);
+  --color-ink-2: var(--cs-ink2);
+  --color-ink-3: var(--cs-ink3);
+  --color-line: var(--cs-line);
+  --color-court: var(--cs-court);
+  --color-court-deep: var(--cs-court-deep);
+  --color-court-text: var(--cs-court-text);
+  --color-kitchen: var(--cs-kitchen);
+  --color-ball: #f2d43b;
+  --color-ball-ink: #2e2700;
+  --color-warn: var(--cs-warn);
+  --color-danger: var(--cs-danger);
+  --color-ok: var(--cs-ok);
+}
+
+:root {
+  --cs-page: #d9e2eb;
+  --cs-surface: #f4f7fa;
+  --cs-card: #ffffff;
+  --cs-ink: #14213d;
+  --cs-ink2: #4e5d78;
+  --cs-ink3: #7c8aa3;
+  --cs-line: #dde4ec;
+  --cs-court: #1d4e89;
+  --cs-court-deep: #163c6a;
+  --cs-court-text: #1d4e89;
+  --cs-kitchen: #3e8e5e;
+  --cs-warn: #b4541a;
+  --cs-danger: #b42318;
+  --cs-ok: #2e7d4f;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --cs-page: #060c16;
+    --cs-surface: #0e1a2b;
+    --cs-card: #15243a;
+    --cs-ink: #e8eef6;
+    --cs-ink2: #a9b6ca;
+    --cs-ink3: #7d8ba2;
+    --cs-line: #24364f;
+    --cs-court: #2f64a8;
+    --cs-court-deep: #1f4a80;
+    --cs-court-text: #8db6ea;
+    --cs-kitchen: #3f8f60;
+    --cs-warn: #e39a5c;
+    --cs-danger: #f07167;
+    --cs-ok: #5cc28a;
+    color-scheme: dark;
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-surface text-ink font-sans antialiased;
+    font-size: 15px;
+    line-height: 1.4;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-ball);
+    outline-offset: 2px;
+  }
+}
+
+/* Condensed display numerals used for times, scores and stats */
+@utility display {
+  font-stretch: 75%;
+  font-weight: 800;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
