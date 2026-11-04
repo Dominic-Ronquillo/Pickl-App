@@ -1,7 +1,7 @@
 import { prisma } from '../../lib/prisma.js';
 import { notFound } from '../../lib/http.js';
 import type { QueueEntryView, QueueStrategy } from './queue.types.js';
-import { buildGroup, decideAfterGame, DEFAULT_ROTATION, estimateWaitMinutes, previewGroups } from './rotation.js';
+import { buildGroup, decideAfterGame, DEFAULT_ROTATION, estimateWaits, previewGroups } from './rotation.js';
 
 const cfg = DEFAULT_ROTATION;
 
@@ -122,12 +122,20 @@ export const paddleStackQueue: QueueStrategy = {
       orderBy: { enteredAt: 'asc' },
       select: { userId: true, enteredAt: true, user: { select: { name: true } } },
     });
+    const courts = session._count.courts;
+    const upNext = (await this.peekNextGroups(sessionId, courts)).flat();
+    const waits = estimateWaits(
+      entries.map((e) => e.userId),
+      upNext,
+      courts,
+      cfg,
+    );
     return entries.map((e, i): QueueEntryView => ({
       userId: e.userId,
       name: e.user.name,
       position: i + 1,
       joinedAt: e.enteredAt,
-      estimatedWaitMinutes: estimateWaitMinutes(i + 1, session._count.courts, entries.length, cfg),
+      estimatedWaitMinutes: waits[i]!,
     }));
   },
 

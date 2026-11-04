@@ -24,6 +24,7 @@ jobs:
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/courtside_test
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/courtside_test
       JWT_SECRET: ci-only-secret-that-is-at-least-32-characters
     steps:
       - uses: actions/checkout@v4

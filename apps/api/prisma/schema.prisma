@@ -6,9 +6,13 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// Hosted on Supabase. DATABASE_URL is the pooled connection the app uses (Supavisor transaction
+// mode, port 6543, ?pgbouncer=true); DIRECT_URL is a session connection (port 5432) that Prisma
+// Migrate needs. Locally both point at the Docker Postgres. See docs/deployment.md.
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ---------- Enums ----------
