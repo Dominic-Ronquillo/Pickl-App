@@ -7,7 +7,7 @@ Two web apps on one API: the **player app** (book courts, open play, live lineup
 - `apps/api`: Express + TypeScript + Prisma + Socket.IO + Zod + JWT + pino. HTTP in `*.routes.ts`, rules in `*.service.ts`; both sides share services. Endpoint reference: `apps/api/README.md`.
 - `apps/player` (:5173) and `apps/venue` (:5174): React 19 + Vite 8 + React Router 7 + TanStack Query 5 + Tailwind 4. Pages in `src/features/<area>/`. Each app signs in as its own side (`<Providers side=...>`); separate sessions, linked to each other for owners who play.
 - `packages/client` (API client, auth, format, realtime, types, app URLs) and `packages/ui` (theme, UI kit, AppShell, SignInForm, CourtDiagram): shared by both apps, consumed as source. Apps never import from each other. See `packages/README.md`.
-- `design/prototype.html`: the original clickable prototype, the visual reference. Court blue `#1D4E89`, kitchen green `#3E8E5E`, ball yellow `#F2D43B`, Archivo font, top-down court diagrams, light and dark mode.
+- `design/prototype.html`: the original clickable prototype, the visual reference. `Courtside_pickleball_app.html` (repo root) is a newer revision a collaborator maintains: no phone frame, an `--accent` token, 44px tap targets; not yet carried into the apps. Court blue `#1D4E89`, kitchen green `#3E8E5E`, ball yellow `#F2D43B`, Archivo font, top-down court diagrams, light and dark mode.
 - `docs/`: getting started, architecture, queue rules, deployment, roadmap. `CONTRIBUTING.md`: branches and commits.
 
 ## Commands (repo root)

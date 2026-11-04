@@ -51,6 +51,7 @@ packages/
   ui/           shared design system: theme, components, app shell, court diagram
 design/
   prototype.html  original clickable mobile prototype (visual reference)
+Courtside_pickleball_app.html  latest prototype revision, maintained on GitHub
 docs/           architecture, setup, queue rules, deployment, roadmap
 .github/        CI workflow and pull request template
 ```
