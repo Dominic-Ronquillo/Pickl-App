@@ -12,7 +12,7 @@ flowchart LR
     S --> P[Prisma]
     S --> RT["Socket.IO rooms"]
   end
-  DB[(PostgreSQL 16)]
+  DB[("PostgreSQL<br/>Supabase")]
   W -- "REST /api (JSON, Bearer JWT)" --> R
   RT -- "live events" --> W
   P --> DB
@@ -43,6 +43,10 @@ src/
 - **Auth**: there's one account type. A user becomes venue staff through the `VenueStaff` table (owner, manager or staff). `requireVenueRole(...)` protects `/business/venues/:venueId/*`. JWTs are stateless and expire after `JWT_EXPIRES_IN`.
 - **Logging**: pino writes structured JSON in production and pretty lines in development. Authorization headers and passwords are redacted.
 - **Health**: `GET /api/health` checks the database, so load balancers can take an instance out while it can't reach Postgres.
+
+### Database
+
+PostgreSQL, hosted on **Supabase** and used only as a database: accounts and live updates belong to the API. The API connects through Supabase's transaction pooler, and Prisma Migrate uses the session pooler (`DIRECT_URL`). Every table has Row Level Security enabled with no policies, so Supabase's Data API can't reach the data; the API, as table owner, is unaffected. Local development and CI run PostgreSQL 16 in Docker, which behaves the same.
 
 ### Data conventions
 

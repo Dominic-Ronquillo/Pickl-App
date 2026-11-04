@@ -45,7 +45,7 @@ CI runs the same steps against Postgres 16. A pull request needs:
 
 - A description of what changed and why. Add screenshots for UI changes, at both phone and desktop width.
 - Tests for new rules and fixes. Keep business rules in pure functions or services, so they're testable without HTTP.
-- A migration if `schema.prisma` changed: `npm run db:migrate -w @courtside/api -- --name <what>`. Commit the generated folder.
+- A migration if `schema.prisma` changed: `npm run db:migrate -w @courtside/api -- --name <what>`. Commit the generated folder. New tables must enable Row Level Security in the same migration (a test checks this; see [deployment.md](docs/deployment.md#row-level-security)).
 - Updated docs when behavior, endpoints or environment variables change.
 
 ## Code conventions

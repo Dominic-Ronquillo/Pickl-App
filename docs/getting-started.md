@@ -4,7 +4,9 @@
 
 - **Node.js 22.** The repository has an `.nvmrc`, so run `nvm use`. Node 20.19+ also works.
 - **npm 10 or newer.** It comes with Node.
-- **Docker**, for the local PostgreSQL database. A Postgres 16 you already run works too: point `DATABASE_URL` at it.
+- **Docker**, for the local PostgreSQL database. A Postgres 16 you already run works too: point `DATABASE_URL` and `DIRECT_URL` at it.
+
+Hosted environments use **Supabase**. To develop against a Supabase project instead of Docker, put its connection strings in `apps/api/.env` (see [deployment.md](deployment.md#database-supabase)). Use a separate project for development, never production.
 
 ## First run
 
@@ -50,16 +52,17 @@ Open play sessions are only seeded once. Run `npm run db:reset -w @courtside/api
 
 ### API (`apps/api/.env`)
 
-| Variable          | Default                 | Notes                                                        |
-| ----------------- | ----------------------- | ------------------------------------------------------------ |
-| `DATABASE_URL`    | —                       | Required. Postgres connection string                         |
-| `JWT_SECRET`      | —                       | Required, 32+ characters                                     |
-| `JWT_EXPIRES_IN`  | `7d`                    | Any [vercel/ms](https://github.com/vercel/ms) duration       |
-| `PORT`            | `4000`                  |                                                              |
-| `CORS_ORIGIN`     | `http://localhost:5173` | Comma-separated list of allowed origins, or `*`              |
-| `LOG_LEVEL`       | `info`                  | `fatal`, `error`, `warn`, `info`, `debug`, `trace`, `silent` |
-| `AUTH_RATE_LIMIT` | `20`                    | Sign-in and sign-up attempts per IP per 15 minutes           |
-| `NODE_ENV`        | `development`           | `production` switches logs to JSON                           |
+| Variable          | Default                 | Notes                                                                                               |
+| ----------------- | ----------------------- | --------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`    | —                       | Required. Connection the API uses. On Supabase: transaction pooler, port 6543, `?pgbouncer=true`    |
+| `DIRECT_URL`      | —                       | Required by Prisma Migrate. On Supabase: session pooler, port 5432. Locally: same as `DATABASE_URL` |
+| `JWT_SECRET`      | —                       | Required, 32+ characters                                                                            |
+| `JWT_EXPIRES_IN`  | `7d`                    | Any [vercel/ms](https://github.com/vercel/ms) duration                                              |
+| `PORT`            | `4000`                  |                                                                                                     |
+| `CORS_ORIGIN`     | `http://localhost:5173` | Comma-separated list of allowed origins, or `*`                                                     |
+| `LOG_LEVEL`       | `info`                  | `fatal`, `error`, `warn`, `info`, `debug`, `trace`, `silent`                                        |
+| `AUTH_RATE_LIMIT` | `20`                    | Sign-in and sign-up attempts per IP per 15 minutes                                                  |
+| `NODE_ENV`        | `development`           | `production` switches logs to JSON                                                                  |
 
 ### Web (`apps/web/.env`, optional)
 

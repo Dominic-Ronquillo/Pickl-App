@@ -12,7 +12,8 @@ Prices are in Philippine pesos, and each venue has its own time zone (the defaul
 | Layer          | Choice                                                                                           |
 | -------------- | ------------------------------------------------------------------------------------------------ |
 | Runtime        | Node.js 22 LTS (works on 20.19+), npm workspaces                                                 |
-| Backend        | Express 4, TypeScript, Prisma 5, PostgreSQL 16, Socket.IO 4, Zod, JWT, pino                      |
+| Backend        | Express 4, TypeScript, Prisma 5, Socket.IO 4, Zod, JWT, pino                                     |
+| Database       | PostgreSQL on **Supabase** (hosted); PostgreSQL 16 in Docker for local development and CI        |
 | Frontend       | React 19, Vite 8, TypeScript, React Router 7, TanStack Query 5, Tailwind CSS 4, socket.io-client |
 | Testing        | Vitest, Supertest (API), Testing Library (web)                                                   |
 | Quality        | ESLint 9 (typescript-eslint, react-hooks), Prettier, GitHub Actions CI                           |
@@ -20,7 +21,7 @@ Prices are in Philippine pesos, and each venue has its own time zone (the defaul
 
 ## Quick start
 
-Prerequisites: Node.js 22 (`nvm use`) and Docker.
+Prerequisites: Node.js 22 (`nvm use`) and Docker. Local development uses Postgres in Docker. Hosted environments use Supabase (see [docs/deployment.md](docs/deployment.md#database-supabase)).
 
 ```bash
 npm install
@@ -71,6 +72,6 @@ You can run these from the repository root:
 - [API reference](apps/api/README.md): every endpoint, data model, real-time events
 - [Web app](apps/web/README.md): structure and how to add a page
 - [Open play queue rules](docs/queue-rules.md): the rotation and where the rules came from
-- [Deployment](docs/deployment.md): Docker image, static web build, migrations
+- [Deployment](docs/deployment.md): Supabase setup, Docker image, static web build, migrations
 - [Roadmap](docs/roadmap.md): open decisions and next work
 - [Contributing](CONTRIBUTING.md): branches, commits, pull requests
