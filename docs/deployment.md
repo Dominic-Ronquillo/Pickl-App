@@ -1,12 +1,13 @@
 # Deployment
 
-Production has three parts:
+Production has four parts:
 
-| Part     | What                          | Where it runs                                           |
-| -------- | ----------------------------- | ------------------------------------------------------- |
-| Database | PostgreSQL                    | **Supabase**                                            |
-| API      | `apps/api` Docker image       | Any container host that supports WebSockets (Socket.IO) |
-| Web      | `apps/web/dist`, static files | Any static host or CDN                                  |
+| Part       | What                             | Where it runs                                           |
+| ---------- | -------------------------------- | ------------------------------------------------------- |
+| Database   | PostgreSQL                       | **Supabase**                                            |
+| API        | `apps/api` Docker image          | Any container host that supports WebSockets (Socket.IO) |
+| Player app | `apps/player/dist`, static files | Any static host or CDN, e.g. `app.example.com`          |
+| Venue app  | `apps/venue/dist`, static files  | Any static host or CDN, e.g. `venue.example.com`        |
 
 ## Database: Supabase
 
@@ -71,21 +72,26 @@ docker run -p 4000:4000 \
 - The host must support WebSockets for live lineups. Behind a load balancer, either enable sticky sessions or run a single instance until a Socket.IO adapter is added (on the [roadmap](roadmap.md)).
 - `app.set('trust proxy', 1)` assumes exactly one proxy in front of the API, so the rate limiter sees real client IPs. Change it if your setup differs.
 
-## Web
+## Web apps
 
 ```bash
-VITE_API_URL=https://api.example.com npm run build -w @courtside/web
+export VITE_API_URL=https://api.example.com
+export VITE_PLAYER_APP_URL=https://app.example.com
+export VITE_VENUE_APP_URL=https://venue.example.com
+npm run build -w @courtside/player     # → apps/player/dist
+npm run build -w @courtside/venue      # → apps/venue/dist
 ```
 
-- Upload `apps/web/dist/` to the static host.
+- Deploy each `dist/` folder as its own site, on its own subdomain.
 - Configure a single-page-app fallback: unknown paths must serve `index.html`.
 - `VITE_API_URL` is read at build time. Leave it empty if the host proxies `/api` and `/socket.io` to the API on the same domain. That's the simplest setup, because it needs no CORS.
-- Add the web app's origin to the API's `CORS_ORIGIN`.
+- `VITE_PLAYER_APP_URL` and `VITE_VENUE_APP_URL` set the links between the two apps.
+- Add both apps' origins to the API's `CORS_ORIGIN`, comma-separated.
 
 ## Release checklist
 
 1. CI is green on `develop`.
 2. Merge `develop` into `main` and tag it `vX.Y.Z`.
 3. Run `db:deploy` against Supabase, or let the image do it.
-4. Deploy the API, then the web app.
+4. Deploy the API, then the player and venue apps.
 5. Check `/api/health`, sign in, and book and cancel a test court.
