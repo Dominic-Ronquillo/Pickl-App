@@ -1,0 +1,44 @@
+{
+  "name": "courtside",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Courtside: court booking, open play and lineups for pickleball players and venues",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n api,player,venue -c blue,green,magenta \"npm run dev -w @courtside/api\" \"npm run dev -w @courtside/player\" \"npm run dev -w @courtside/venue\"",
+    "dev:api": "npm run dev -w @courtside/api",
+    "dev:player": "npm run dev -w @courtside/player",
+    "dev:venue": "npm run dev -w @courtside/venue",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "concurrently": "^10.0.6",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.14.0",
+    "prettier": "^3.9.10",
+    "typescript": "~5.9",
+    "typescript-eslint": "^8.72.1"
+  },
+  "allowScripts": {
+    "@prisma/client@5.22.0": true,
+    "@prisma/engines@5.22.0": true,
+    "esbuild@0.28.2": true,
+    "prisma@5.22.0": true
+  }
+}

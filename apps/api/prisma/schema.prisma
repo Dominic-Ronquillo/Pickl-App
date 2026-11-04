@@ -1,0 +1,370 @@
+// Courtside data model
+// Money is stored as integer centavos (₱1.00 = 100). All times are timestamptz (UTC);
+// each venue has its own timezone for opening hours, pricing and "today".
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Hosted on Supabase. DATABASE_URL is the pooled connection the app uses (Supavisor transaction
+// mode, port 6543, ?pgbouncer=true); DIRECT_URL is a session connection (port 5432) that Prisma
+// Migrate needs. Locally both point at the Docker Postgres. See docs/deployment.md.
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------- Enums ----------
+
+enum StaffRole {
+  OWNER
+  MANAGER
+  STAFF
+}
+
+enum SkillLevel {
+  ALL
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum BookingStatus {
+  PENDING // waiting for online payment
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum BookingSource {
+  APP
+  WALK_IN
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CASH
+  GCASH
+  MAYA
+  CARD
+}
+
+enum BlockReason {
+  MAINTENANCE
+  OPEN_PLAY
+  EVENT
+}
+
+enum SessionStatus {
+  SCHEDULED
+  LIVE
+  ENDED
+  CANCELLED
+}
+
+enum RegistrationStatus {
+  JOINED
+  CHECKED_IN
+  LEFT
+  NO_SHOW
+}
+
+enum GameStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+enum Team {
+  A
+  B
+}
+
+enum QueueStatus {
+  WAITING // paddle is in the stack
+  HOLDING // won and is staying on courtId for the next game
+  PLAYING // on courtId right now
+}
+
+// ---------- People ----------
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  phone        String?  @unique
+  passwordHash String
+  name         String
+  rating       Decimal  @default(3.00) @db.Decimal(4, 2)
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+
+  staffRoles      VenueStaff[]
+  bookings        Booking[]              @relation("BookingPlayer")
+  createdBookings Booking[]              @relation("BookingCreatedBy")
+  createdSessions OpenPlaySession[]
+  createdBlocks   CourtBlock[]
+  registrations   OpenPlayRegistration[]
+  gamesPlayed     GamePlayer[]
+  queueEntries    QueueEntry[]
+  payments        Payment[]              @relation("PaymentPayer")
+  recordedPayments Payment[]             @relation("PaymentRecordedBy")
+}
+
+// A user becomes "business side" by being staff at one or more venues.
+model VenueStaff {
+  venueId   String
+  userId    String
+  role      StaffRole
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+
+  venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([venueId, userId])
+  @@index([userId])
+}
+
+// ---------- Venues and courts ----------
+
+model Venue {
+  id             String   @id @default(cuid())
+  name           String
+  slug           String   @unique
+  address        String?
+  latitude       Float?
+  longitude      Float?
+  timezone       String   @default("Asia/Manila")
+  opensAtMinute  Int      @default(360)  // 6:00 AM
+  closesAtMinute Int      @default(1320) // 10:00 PM
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+
+  courts       Court[]
+  staff        VenueStaff[]
+  pricingRules PricingRule[]
+  bookings     Booking[]
+  sessions     OpenPlaySession[]
+}
+
+model Court {
+  id       String  @id @default(cuid())
+  venueId  String
+  number   Int
+  name     String
+  isActive Boolean @default(true)
+
+  venue         Venue           @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  bookings      Booking[]
+  blocks        CourtBlock[]
+  games         Game[]
+  sessionCourts OpenPlayCourt[]
+  queueEntries  QueueEntry[]
+
+  @@unique([venueId, number])
+}
+
+// Price per court-hour. The most specific matching rule wins:
+// a rule for a weekday beats an every-day rule, then higher priority wins.
+model PricingRule {
+  id           String @id @default(cuid())
+  venueId      String
+  dayOfWeek    Int? // 0 = Sunday ... 6 = Saturday; null = every day
+  startMinute  Int // inclusive, minutes from midnight in venue time
+  endMinute    Int // exclusive
+  centsPerHour Int
+  priority     Int    @default(0)
+
+  venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@index([venueId])
+}
+
+// ---------- Court reservations ----------
+
+model Booking {
+  id            String        @id @default(cuid())
+  venueId       String
+  courtId       String
+  userId        String? // null for walk-ins without an account
+  guestName     String?
+  startsAt      DateTime      @db.Timestamptz(3)
+  endsAt        DateTime      @db.Timestamptz(3)
+  status        BookingStatus @default(CONFIRMED)
+  source        BookingSource @default(APP)
+  totalCents    Int
+  paymentStatus PaymentStatus @default(UNPAID)
+  createdById   String
+  cancelledAt   DateTime?     @db.Timestamptz(3)
+  cancelReason  String?
+  createdAt     DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime      @updatedAt @db.Timestamptz(3)
+
+  venue     Venue     @relation(fields: [venueId], references: [id])
+  court     Court     @relation(fields: [courtId], references: [id])
+  user      User?     @relation("BookingPlayer", fields: [userId], references: [id])
+  createdBy User      @relation("BookingCreatedBy", fields: [createdById], references: [id])
+  payments  Payment[]
+
+  // Overlap protection is a Postgres exclusion constraint: see prisma/migrations/*_no_overlap_constraints
+  @@index([courtId, startsAt])
+  @@index([venueId, startsAt])
+  @@index([userId, startsAt])
+}
+
+// Time a court can't be booked: maintenance, events, or open play.
+model CourtBlock {
+  id          String      @id @default(cuid())
+  courtId     String
+  startsAt    DateTime    @db.Timestamptz(3)
+  endsAt      DateTime    @db.Timestamptz(3)
+  reason      BlockReason
+  note        String?
+  sessionId   String? // set when reason = OPEN_PLAY
+  createdById String
+  createdAt   DateTime    @default(now()) @db.Timestamptz(3)
+
+  court     Court            @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  session   OpenPlaySession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdBy User             @relation(fields: [createdById], references: [id])
+
+  @@index([courtId, startsAt])
+}
+
+// ---------- Open play ----------
+
+model OpenPlaySession {
+  id          String        @id @default(cuid())
+  venueId     String
+  title       String?
+  startsAt    DateTime      @db.Timestamptz(3)
+  endsAt      DateTime      @db.Timestamptz(3)
+  skillLevel  SkillLevel    @default(ALL)
+  minRating   Decimal?      @db.Decimal(4, 2)
+  maxRating   Decimal?      @db.Decimal(4, 2)
+  capacity    Int
+  feeCents    Int
+  status      SessionStatus @default(SCHEDULED)
+  createdById String
+  createdAt   DateTime      @default(now()) @db.Timestamptz(3)
+
+  venue         Venue                  @relation(fields: [venueId], references: [id])
+  createdBy     User                   @relation(fields: [createdById], references: [id])
+  courts        OpenPlayCourt[]
+  blocks        CourtBlock[]
+  registrations OpenPlayRegistration[]
+  games         Game[]
+  queueEntries  QueueEntry[]
+
+  @@index([venueId, startsAt])
+  @@index([startsAt, skillLevel])
+}
+
+model OpenPlayCourt {
+  sessionId String
+  courtId   String
+
+  session OpenPlaySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  court   Court           @relation(fields: [courtId], references: [id])
+
+  @@id([sessionId, courtId])
+}
+
+model OpenPlayRegistration {
+  id            String             @id @default(cuid())
+  sessionId     String
+  userId        String
+  status        RegistrationStatus @default(JOINED)
+  paymentStatus PaymentStatus      @default(UNPAID)
+  joinedAt      DateTime           @default(now()) @db.Timestamptz(3)
+  checkedInAt   DateTime?          @db.Timestamptz(3)
+  leftAt        DateTime?          @db.Timestamptz(3)
+
+  session  OpenPlaySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user     User            @relation(fields: [userId], references: [id])
+  payments Payment[]
+
+  @@unique([sessionId, userId])
+  @@index([sessionId, status])
+}
+
+// ---------- Games, scores, lineups ----------
+
+// One game on one court. Open play games have a sessionId; booked-court games may not.
+model Game {
+  id        String     @id @default(cuid())
+  courtId   String
+  sessionId String?
+  sequence  Int // game number within the session (1, 2, 3...)
+  status    GameStatus @default(IN_PROGRESS)
+  scoreA    Int        @default(0)
+  scoreB    Int        @default(0)
+  startedAt DateTime   @default(now()) @db.Timestamptz(3)
+  endedAt   DateTime?  @db.Timestamptz(3)
+
+  court   Court            @relation(fields: [courtId], references: [id])
+  session OpenPlaySession? @relation(fields: [sessionId], references: [id])
+  players GamePlayer[]
+
+  @@index([sessionId, status])
+  @@index([courtId, status])
+}
+
+model GamePlayer {
+  gameId String
+  userId String
+  team   Team
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@id([gameId, userId])
+  @@index([userId])
+}
+
+// ---------- Payments ----------
+
+model Payment {
+  id             String        @id @default(cuid())
+  payerId        String?
+  amountCents    Int
+  method         PaymentMethod
+  status         PaymentStatus @default(PAID)
+  providerRef    String? // e.g. payment gateway reference
+  bookingId      String?
+  registrationId String?
+  recordedById   String? // staff member who took a cash payment
+  createdAt      DateTime      @default(now()) @db.Timestamptz(3)
+
+  payer        User?                 @relation("PaymentPayer", fields: [payerId], references: [id])
+  recordedBy   User?                 @relation("PaymentRecordedBy", fields: [recordedById], references: [id])
+  booking      Booking?              @relation(fields: [bookingId], references: [id])
+  registration OpenPlayRegistration? @relation(fields: [registrationId], references: [id])
+
+  @@index([createdAt])
+}
+
+// ---------- Open play queue ----------
+// Rules live in src/modules/queue/rotation.ts; see docs/queue-rules.md.
+// One row per checked-in player. Order in line is enteredAt.
+
+model QueueEntry {
+  id        String      @id @default(cuid())
+  sessionId String
+  userId    String
+  status    QueueStatus @default(WAITING)
+  courtId   String? // HOLDING / PLAYING: the court the player is on
+  streak    Int         @default(0) // consecutive games on court
+  enteredAt DateTime    @default(now()) @db.Timestamptz(3)
+
+  session OpenPlaySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User            @relation(fields: [userId], references: [id])
+  court   Court?          @relation(fields: [courtId], references: [id])
+
+  @@unique([sessionId, userId])
+  @@index([sessionId, status, enteredAt])
+}

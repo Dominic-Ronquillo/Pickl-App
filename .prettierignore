@@ -1,0 +1,7 @@
+node_modules
+dist
+coverage
+package-lock.json
+apps/api/prisma/migrations
+design/prototype.html
+Courtside_pickleball_app.html
