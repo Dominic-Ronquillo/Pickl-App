@@ -91,7 +91,7 @@ npm run build -w @courtside/venue      # → apps/venue/dist
 ## Release checklist
 
 1. CI is green on `develop`.
-2. Merge `develop` into `main` and tag it `vX.Y.Z`.
+2. Tag `develop`: `git tag vX.Y.Z && git push origin vX.Y.Z`.
 3. Run `db:deploy` against Supabase, or let the image do it.
 4. Deploy the API, then the player and venue apps.
 5. Check `/api/health`, sign in, and book and cancel a test court.

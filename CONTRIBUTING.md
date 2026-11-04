@@ -3,8 +3,8 @@
 ## Branches
 
 ```
-main                     production; only receives merges from develop
-└── develop              integration; what the next release will contain
+main                     front page: README, CONTRIBUTING and docs only, no code
+develop                  the code: latest working version of everything; releases are tagged here
     ├── be-main          backend line of work (apps/api)
     │   └── be-<topic>   backend features and fixes, e.g. be-open-play-queue
     ├── fe-main          frontend line of work (apps/player, apps/venue, packages/*)
@@ -17,10 +17,19 @@ main                     production; only receives merges from develop
 
 - Branch backend work from `be-main` and frontend work from `fe-main`. Open the pull request back into the same branch.
 - Merge `be-main` and `fe-main` into `develop` once their work is green and reviewed.
-- Merge `develop` into `main` to release. Tag releases `vX.Y.Z`.
+- To release, tag `develop` (`vX.Y.Z`) once CI is green.
 - Merge `develop` back into `be-main` and `fe-main` regularly, so each side picks up the other's changes.
 - If a change touches both apps (for example, a new endpoint and the screen that uses it), land the API part on `be-main` first, then the web part on `fe-main`.
 - Use merge commits (`--no-ff`) into the long-lived branches, so the history shows what each feature brought in.
+- **Never merge into `main`.** It only holds the docs collaborators read on GitHub. After docs change on `develop`, copy them over:
+
+  ```bash
+  git checkout main
+  git checkout develop -- CONTRIBUTING.md docs
+  git commit -m "docs: sync from develop"
+  ```
+
+  `README.md` on `main` is its own version (it points people to `develop`), so update it by hand.
 
 ## Commits
 

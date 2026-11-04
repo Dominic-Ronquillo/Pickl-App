@@ -16,7 +16,7 @@ Two web apps on one API: the **player app** (book courts, open play, live lineup
 
 ## Branches
 
-`main` (production) ← `develop` (integration) ← `be-main` (backend) / `fe-main` (both web apps and packages). Backend work branches `be-<topic>` from `be-main`; frontend `fe-player-<topic>`, `fe-venue-<topic>` or `fe-<topic>` (shared) from `fe-main`; also `docs/<topic>`, `chore/<topic>`. Merge with `--no-ff`. Conventional Commits with `api`/`web` scopes.
+`main` is a docs-only front page (README, CONTRIBUTING, docs, prototype; never merge code into it). `develop` holds the code and release tags ← `be-main` (backend) / `fe-main` (both web apps and packages). Backend work branches `be-<topic>` from `be-main`; frontend `fe-player-<topic>`, `fe-venue-<topic>` or `fe-<topic>` (shared) from `fe-main`; also `docs/<topic>`, `chore/<topic>`. Merge with `--no-ff`. Conventional Commits with `api`/`web` scopes.
 
 ## Decisions already made
 
