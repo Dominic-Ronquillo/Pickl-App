@@ -92,8 +92,8 @@ All routes are under `/api`. Everything except `/health` and `/auth/*` needs `Au
 | POST   | `/open-play/sessions/:id/join`                  | Session detail | Enforces capacity and rating range                                                                                   |
 | POST   | `/open-play/sessions/:id/leave`                 | Session detail |                                                                                                                      |
 | GET    | `/open-play/sessions/:id/lineups`               | Lineups        | Live game per court + "Up next"                                                                                      |
-| GET    | `/open-play/sessions/:id/queue`                 | Session detail | `501` until the queue is built                                                                                       |
-| GET    | `/open-play/sessions/:id/queue/me`              | Session detail | `501` until the queue is built                                                                                       |
+| GET    | `/open-play/sessions/:id/queue`                 | Session detail | Waiting players in order, with estimated wait                                                                        |
+| GET    | `/open-play/sessions/:id/queue/me`              | Session detail | My place in line, or `null` when not waiting                                                                         |
 
 ### Venue side — `/business/venues/:venueId/...`
 
