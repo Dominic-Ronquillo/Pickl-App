@@ -4,14 +4,20 @@ import { overlaps, venueDayBounds, venueLocal } from '../../lib/time.js';
 
 /** Venue dashboard for one day: revenue, hourly revenue, court use, counts and live court status. */
 export async function getDashboard(venueId: string, date: string) {
-  const venue = await prisma.venue.findUnique({ where: { id: venueId }, include: { courts: { where: { isActive: true }, orderBy: { number: 'asc' } } } });
+  const venue = await prisma.venue.findUnique({
+    where: { id: venueId },
+    include: { courts: { where: { isActive: true }, orderBy: { number: 'asc' } } },
+  });
   if (!venue) throw notFound('Venue');
   const tz = venue.timezone;
   const { start, end } = venueDayBounds(date, tz);
   const inDay = { startsAt: { lt: end }, endsAt: { gt: start } };
 
   const [bookings, blocks, sessions, payments, liveGames] = await Promise.all([
-    prisma.booking.findMany({ where: { venueId, status: { in: ['CONFIRMED', 'COMPLETED'] }, ...inDay }, include: { user: { select: { name: true } } } }),
+    prisma.booking.findMany({
+      where: { venueId, status: { in: ['CONFIRMED', 'COMPLETED'] }, ...inDay },
+      include: { user: { select: { name: true } } },
+    }),
     prisma.courtBlock.findMany({ where: { court: { venueId }, ...inDay } }),
     prisma.openPlaySession.findMany({
       where: { venueId, status: { not: 'CANCELLED' }, ...inDay },
@@ -25,7 +31,10 @@ export async function getDashboard(venueId: string, date: string) {
       },
       select: { amountCents: true, createdAt: true },
     }),
-    prisma.game.findMany({ where: { status: 'IN_PROGRESS', court: { venueId } }, select: { courtId: true, sequence: true, scoreA: true, scoreB: true } }),
+    prisma.game.findMany({
+      where: { status: 'IN_PROGRESS', court: { venueId } },
+      select: { courtId: true, sequence: true, scoreA: true, scoreB: true },
+    }),
   ]);
 
   // Revenue by local hour, from recorded payments.
@@ -34,7 +43,8 @@ export async function getDashboard(venueId: string, date: string) {
 
   // Court use = booked + open play minutes / available court minutes.
   const openMinutes = (venue.closesAtMinute - venue.opensAtMinute) * venue.courts.length;
-  const clip = (s: Date, e: Date) => Math.max(0, (Math.min(e.getTime(), end.getTime()) - Math.max(s.getTime(), start.getTime())) / 60_000);
+  const clip = (s: Date, e: Date) =>
+    Math.max(0, (Math.min(e.getTime(), end.getTime()) - Math.max(s.getTime(), start.getTime())) / 60_000);
   const usedMinutes =
     bookings.reduce((n, b) => n + clip(b.startsAt, b.endsAt), 0) +
     blocks.filter((b) => b.reason === 'OPEN_PLAY').reduce((n, b) => n + clip(b.startsAt, b.endsAt), 0);
@@ -46,9 +56,13 @@ export async function getDashboard(venueId: string, date: string) {
     const booking = bookings.find((b) => b.courtId === c.id && b.startsAt <= now && b.endsAt > now);
     const status = block?.reason === 'OPEN_PLAY' ? 'OPEN_PLAY' : block ? 'BLOCKED' : booking ? 'BOOKED' : 'FREE';
     return {
-      courtId: c.id, number: c.number, status,
+      courtId: c.id,
+      number: c.number,
+      status,
       game: game ?? null,
-      booking: booking ? { id: booking.id, name: booking.user?.name ?? booking.guestName, endsAt: booking.endsAt } : null,
+      booking: booking
+        ? { id: booking.id, name: booking.user?.name ?? booking.guestName, endsAt: booking.endsAt }
+        : null,
     };
   });
 
@@ -65,25 +79,46 @@ export async function getDashboard(venueId: string, date: string) {
 
 /** Schedule grid for staff: everything occupying each court that day, with names. */
 export async function getSchedule(venueId: string, date: string) {
-  const venue = await prisma.venue.findUnique({ where: { id: venueId }, include: { courts: { orderBy: { number: 'asc' } } } });
+  const venue = await prisma.venue.findUnique({
+    where: { id: venueId },
+    include: { courts: { orderBy: { number: 'asc' } } },
+  });
   if (!venue) throw notFound('Venue');
   const { start, end } = venueDayBounds(date, venue.timezone);
   const inDay = { startsAt: { lt: end }, endsAt: { gt: start } };
   const [bookings, blocks] = await Promise.all([
     prisma.booking.findMany({
       where: { venueId, status: { in: ['PENDING', 'CONFIRMED'] }, ...inDay },
-      select: { id: true, courtId: true, startsAt: true, endsAt: true, guestName: true, paymentStatus: true, source: true, totalCents: true, user: { select: { id: true, name: true } } },
+      select: {
+        id: true,
+        courtId: true,
+        startsAt: true,
+        endsAt: true,
+        guestName: true,
+        paymentStatus: true,
+        source: true,
+        totalCents: true,
+        user: { select: { id: true, name: true } },
+      },
     }),
-    prisma.courtBlock.findMany({ where: { court: { venueId }, ...inDay }, select: { id: true, courtId: true, startsAt: true, endsAt: true, reason: true, note: true, sessionId: true } }),
+    prisma.courtBlock.findMany({
+      where: { court: { venueId }, ...inDay },
+      select: { id: true, courtId: true, startsAt: true, endsAt: true, reason: true, note: true, sessionId: true },
+    }),
   ]);
   return {
     date,
     opensAtMinute: venue.opensAtMinute,
     closesAtMinute: venue.closesAtMinute,
     courts: venue.courts.map((c) => ({
-      id: c.id, number: c.number, name: c.name, isActive: c.isActive,
+      id: c.id,
+      number: c.number,
+      name: c.name,
+      isActive: c.isActive,
       items: [
-        ...bookings.filter((b) => b.courtId === c.id).map((b) => ({ type: 'BOOKING' as const, ...b, name: b.user?.name ?? b.guestName ?? 'Walk-in' })),
+        ...bookings
+          .filter((b) => b.courtId === c.id)
+          .map((b) => ({ type: 'BOOKING' as const, ...b, name: b.user?.name ?? b.guestName ?? 'Walk-in' })),
         ...blocks.filter((b) => b.courtId === c.id).map((b) => ({ type: b.reason, ...b })),
       ].sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime()),
     })),

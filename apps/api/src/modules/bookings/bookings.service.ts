@@ -35,7 +35,8 @@ export async function createBooking(input: CreateBookingInput) {
       if (input.startsAt < new Date()) throw new HttpError(422, 'That time has already passed', 'IN_PAST');
       const s = venueLocal(input.startsAt, venue.timezone);
       const e = venueLocal(endsAt, venue.timezone);
-      if (s.date !== e.date && e.minute !== 0) throw new HttpError(422, 'Bookings can’t run past midnight', 'OUT_OF_HOURS');
+      if (s.date !== e.date && e.minute !== 0)
+        throw new HttpError(422, 'Bookings can’t run past midnight', 'OUT_OF_HOURS');
       const endMinute = e.minute === 0 && s.date !== e.date ? 1440 : e.minute;
       if (s.minute < venue.opensAtMinute || endMinute > venue.closesAtMinute) {
         throw new HttpError(422, 'That time is outside the venue’s opening hours', 'OUT_OF_HOURS');
@@ -49,7 +50,9 @@ export async function createBooking(input: CreateBookingInput) {
       if (clash) throw conflict(`Court ${court.number} is already booked at that time`, 'SLOT_TAKEN');
       if (block) {
         throw conflict(
-          block.reason === 'OPEN_PLAY' ? `Court ${court.number} is reserved for open play then` : `Court ${court.number} is closed then`,
+          block.reason === 'OPEN_PLAY'
+            ? `Court ${court.number} is reserved for open play then`
+            : `Court ${court.number} is closed then`,
           'COURT_BLOCKED',
         );
       }

@@ -6,7 +6,10 @@ import { queue } from '../queue/queue.service.js';
 
 const ACTIVE_REG = ['JOINED', 'CHECKED_IN'] as const;
 
-export async function listSessions(f: { from: Date; to: Date; level?: SkillLevel; venueId?: string }, viewerId?: string) {
+export async function listSessions(
+  f: { from: Date; to: Date; level?: SkillLevel; venueId?: string },
+  viewerId?: string,
+) {
   const sessions = await prisma.openPlaySession.findMany({
     where: {
       status: { in: ['SCHEDULED', 'LIVE'] },
@@ -19,7 +22,9 @@ export async function listSessions(f: { from: Date; to: Date; level?: SkillLevel
     include: {
       venue: { select: { id: true, name: true } },
       _count: { select: { courts: true, registrations: { where: { status: { in: [...ACTIVE_REG] } } } } },
-      registrations: viewerId ? { where: { userId: viewerId, status: { in: [...ACTIVE_REG] } }, select: { status: true } } : false,
+      registrations: viewerId
+        ? { where: { userId: viewerId, status: { in: [...ACTIVE_REG] } }, select: { status: true } }
+        : false,
     },
   });
   return sessions.map(({ _count, registrations, ...s }) => ({
@@ -74,7 +79,8 @@ export async function createSession(venueId: string, staffId: string, input: Cre
   const session = await prisma.$transaction(
     async (tx) => {
       const courts = await tx.court.findMany({ where: { id: { in: input.courtIds }, venueId, isActive: true } });
-      if (courts.length !== input.courtIds.length) throw new HttpError(422, 'One or more courts aren’t at this venue', 'BAD_COURT');
+      if (courts.length !== input.courtIds.length)
+        throw new HttpError(422, 'One or more courts aren’t at this venue', 'BAD_COURT');
 
       const clash = await tx.booking.findFirst({
         where: {
@@ -93,7 +99,12 @@ export async function createSession(venueId: string, staffId: string, input: Cre
       });
       await tx.courtBlock.createMany({
         data: courtIds.map((courtId) => ({
-          courtId, startsAt: input.startsAt, endsAt: input.endsAt, reason: 'OPEN_PLAY' as const, sessionId: created.id, createdById: staffId,
+          courtId,
+          startsAt: input.startsAt,
+          endsAt: input.endsAt,
+          reason: 'OPEN_PLAY' as const,
+          sessionId: created.id,
+          createdById: staffId,
         })),
       });
       return created;
@@ -110,7 +121,10 @@ export async function setSessionStatus(venueId: string, sessionId: string, statu
   const updated = await prisma.$transaction(async (tx) => {
     if (status === 'CANCELLED') await tx.courtBlock.deleteMany({ where: { sessionId } });
     if (status === 'ENDED') {
-      await tx.game.updateMany({ where: { sessionId, status: 'IN_PROGRESS' }, data: { status: 'ABANDONED', endedAt: new Date() } });
+      await tx.game.updateMany({
+        where: { sessionId, status: 'IN_PROGRESS' },
+        data: { status: 'ABANDONED', endedAt: new Date() },
+      });
       await tx.openPlayRegistration.updateMany({ where: { sessionId, status: 'JOINED' }, data: { status: 'NO_SHOW' } });
     }
     return tx.openPlaySession.update({ where: { id: sessionId }, data: { status } });
@@ -131,7 +145,11 @@ export async function joinSession(sessionId: string, userId: string) {
       }
       const user = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { rating: true } });
       if ((s.minRating && user.rating.lt(s.minRating)) || (s.maxRating && user.rating.gt(s.maxRating))) {
-        throw new HttpError(422, `This session is for ratings ${s.minRating ?? ''}–${s.maxRating ?? ''}`, 'RATING_OUT_OF_RANGE');
+        throw new HttpError(
+          422,
+          `This session is for ratings ${s.minRating ?? ''}–${s.maxRating ?? ''}`,
+          'RATING_OUT_OF_RANGE',
+        );
       }
       const count = await tx.openPlayRegistration.count({ where: { sessionId, status: { in: [...ACTIVE_REG] } } });
       const existing = await tx.openPlayRegistration.findUnique({ where: { sessionId_userId: { sessionId, userId } } });
@@ -154,14 +172,23 @@ export async function joinSession(sessionId: string, userId: string) {
 export async function leaveSession(sessionId: string, userId: string) {
   const reg = await prisma.openPlayRegistration.findUnique({ where: { sessionId_userId: { sessionId, userId } } });
   if (!reg || !ACTIVE_REG.includes(reg.status as (typeof ACTIVE_REG)[number])) throw notFound('Registration');
-  const updated = await prisma.openPlayRegistration.update({ where: { id: reg.id }, data: { status: 'LEFT', leftAt: new Date() } });
+  const updated = await prisma.openPlayRegistration.update({
+    where: { id: reg.id },
+    data: { status: 'LEFT', leftAt: new Date() },
+  });
   await queue.onLeave(sessionId, userId);
   emit.session(sessionId, RT.SESSION_UPDATED, { type: 'left', userId });
   return updated;
 }
 
 /** Staff checks a player in at the front desk, optionally recording payment. */
-export async function checkIn(venueId: string, sessionId: string, userId: string, staffId: string, paidWith?: PaymentMethod) {
+export async function checkIn(
+  venueId: string,
+  sessionId: string,
+  userId: string,
+  staffId: string,
+  paidWith?: PaymentMethod,
+) {
   const reg = await prisma.openPlayRegistration.findFirst({
     where: { sessionId, userId, session: { venueId } },
     include: { session: { select: { feeCents: true } } },
@@ -170,7 +197,13 @@ export async function checkIn(venueId: string, sessionId: string, userId: string
   const updated = await prisma.$transaction(async (tx) => {
     if (paidWith && reg.paymentStatus !== 'PAID') {
       await tx.payment.create({
-        data: { registrationId: reg.id, payerId: userId, amountCents: reg.session.feeCents, method: paidWith, recordedById: staffId },
+        data: {
+          registrationId: reg.id,
+          payerId: userId,
+          amountCents: reg.session.feeCents,
+          method: paidWith,
+          recordedById: staffId,
+        },
       });
     }
     return tx.openPlayRegistration.update({
@@ -185,9 +218,14 @@ export async function checkIn(venueId: string, sessionId: string, userId: string
 }
 
 export async function undoCheckIn(venueId: string, sessionId: string, userId: string) {
-  const reg = await prisma.openPlayRegistration.findFirst({ where: { sessionId, userId, session: { venueId }, status: 'CHECKED_IN' } });
+  const reg = await prisma.openPlayRegistration.findFirst({
+    where: { sessionId, userId, session: { venueId }, status: 'CHECKED_IN' },
+  });
   if (!reg) throw notFound('Check-in');
-  const updated = await prisma.openPlayRegistration.update({ where: { id: reg.id }, data: { status: 'JOINED', checkedInAt: null } });
+  const updated = await prisma.openPlayRegistration.update({
+    where: { id: reg.id },
+    data: { status: 'JOINED', checkedInAt: null },
+  });
   await queue.onLeave(sessionId, userId);
   emit.venue(venueId, RT.SESSION_UPDATED, { sessionId, type: 'check-in-undone', userId });
   return updated;
@@ -199,6 +237,12 @@ export async function getRoster(venueId: string, sessionId: string) {
   return prisma.openPlayRegistration.findMany({
     where: { sessionId, status: { in: [...ACTIVE_REG] } },
     orderBy: { joinedAt: 'asc' },
-    select: { id: true, status: true, paymentStatus: true, checkedInAt: true, user: { select: { id: true, name: true, rating: true, phone: true } } },
+    select: {
+      id: true,
+      status: true,
+      paymentStatus: true,
+      checkedInAt: true,
+      user: { select: { id: true, name: true, rating: true, phone: true } },
+    },
   });
 }

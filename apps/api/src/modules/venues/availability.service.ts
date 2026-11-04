@@ -20,7 +20,12 @@ export async function getAvailability(venueId: string, date: string, viewerId?: 
   const courtIds = venue.courts.map((c) => c.id);
   const [bookings, blocks] = await Promise.all([
     prisma.booking.findMany({
-      where: { courtId: { in: courtIds }, status: { in: ['PENDING', 'CONFIRMED'] }, startsAt: { lt: end }, endsAt: { gt: start } },
+      where: {
+        courtId: { in: courtIds },
+        status: { in: ['PENDING', 'CONFIRMED'] },
+        startsAt: { lt: end },
+        endsAt: { gt: start },
+      },
       select: { courtId: true, startsAt: true, endsAt: true, userId: true },
     }),
     prisma.courtBlock.findMany({

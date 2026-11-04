@@ -49,18 +49,18 @@ Each module keeps HTTP concerns in `*.routes.ts` and business rules in `*.servic
 
 ## Data model
 
-| Table | Purpose |
-|---|---|
-| `User` | Every account. A user becomes venue staff through `VenueStaff`. |
-| `VenueStaff` | User's role at a venue: `OWNER`, `MANAGER`, `STAFF`. |
-| `Venue`, `Court` | Venues with time zone and opening hours; numbered courts. |
-| `PricingRule` | Price per court-hour by weekday and time band (e.g. ₱500 after 5 PM). |
-| `Booking` | A court reservation by a player or a staff walk-in. |
-| `CourtBlock` | Time a court can't be booked: maintenance, events, open play. |
-| `OpenPlaySession`, `OpenPlayCourt` | A session, its skill level, capacity, fee and courts. |
-| `OpenPlayRegistration` | A player's place in a session: joined, checked in, left, no-show. |
-| `Game`, `GamePlayer` | One game on one court, teams A and B, live score. Powers lineups and stats. |
-| `Payment` | Cash, GCash, Maya or card payments for bookings and session fees. |
+| Table                              | Purpose                                                                     |
+| ---------------------------------- | --------------------------------------------------------------------------- |
+| `User`                             | Every account. A user becomes venue staff through `VenueStaff`.             |
+| `VenueStaff`                       | User's role at a venue: `OWNER`, `MANAGER`, `STAFF`.                        |
+| `Venue`, `Court`                   | Venues with time zone and opening hours; numbered courts.                   |
+| `PricingRule`                      | Price per court-hour by weekday and time band (e.g. ₱500 after 5 PM).       |
+| `Booking`                          | A court reservation by a player or a staff walk-in.                         |
+| `CourtBlock`                       | Time a court can't be booked: maintenance, events, open play.               |
+| `OpenPlaySession`, `OpenPlayCourt` | A session, its skill level, capacity, fee and courts.                       |
+| `OpenPlayRegistration`             | A player's place in a session: joined, checked in, left, no-show.           |
+| `Game`, `GamePlayer`               | One game on one court, teams A and B, live score. Powers lineups and stats. |
+| `Payment`                          | Cash, GCash, Maya or card payments for bookings and session fees.           |
 
 Money is stored in centavos (`40000` = ₱400). Times are stored in UTC; each venue's time zone (default `Asia/Manila`) decides opening hours, peak pricing and what "today" means.
 
@@ -72,55 +72,55 @@ All routes are under `/api`. Everything except `/health` and `/auth/*` needs `Au
 
 ### Player side
 
-| Method | Path | Screen | Notes |
-|---|---|---|---|
-| POST | `/auth/register` | Player sign-up | `{ name, email, password, phone?, skillLevel }`; skill level sets the starting rating |
-| POST | `/auth/register-venue` | Venue sign-up | Owner account + venue + courts + prices in one transaction (see below) |
-| POST | `/auth/login` | Sign in | `{ email, password, as: "player" \| "venue" }`; `as: "venue"` returns `403 NOT_VENUE_STAFF` for player-only accounts |
-| POST | `/auth/forgot-password` | Reset password | Always `202`, so it never reveals whether an email has an account |
-| GET | `/me` | Profile | |
-| GET | `/me/stats` | Home | Games total, this month, win rate |
-| GET | `/me/bookings` | Home, Book | Upcoming bookings |
-| GET | `/me/games` | Home | Recent results with partners and opponents |
-| GET | `/me/open-play` | Home | Sessions I've joined |
-| POST | `/me/venues` | Profile | A signed-in player registers a venue and becomes its owner |
-| GET | `/venues` | Book | |
-| GET | `/venues/:venueId/availability?date=YYYY-MM-DD` | Book | Court × hour grid: `OPEN`, `BOOKED`, `MINE`, `OPEN_PLAY`, `BLOCKED`, `PAST`, with price |
-| POST | `/bookings` | Book | `{ courtId, startsAt, durationMinutes: 60 \| 90 \| 120 }` |
-| POST | `/bookings/:id/cancel` | Book | Own bookings, before start time |
-| GET | `/open-play/sessions?level=&venueId=&from=&to=` | Open play | Includes spots left and my status |
-| GET | `/open-play/sessions/:id` | Session detail | Courts, players, my status |
-| POST | `/open-play/sessions/:id/join` | Session detail | Enforces capacity and rating range |
-| POST | `/open-play/sessions/:id/leave` | Session detail | |
-| GET | `/open-play/sessions/:id/lineups` | Lineups | Live game per court + "Up next" |
-| GET | `/open-play/sessions/:id/queue` | Session detail | `501` until the queue is built |
-| GET | `/open-play/sessions/:id/queue/me` | Session detail | `501` until the queue is built |
+| Method | Path                                            | Screen         | Notes                                                                                                                |
+| ------ | ----------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/auth/register`                                | Player sign-up | `{ name, email, password, phone?, skillLevel }`; skill level sets the starting rating                                |
+| POST   | `/auth/register-venue`                          | Venue sign-up  | Owner account + venue + courts + prices in one transaction (see below)                                               |
+| POST   | `/auth/login`                                   | Sign in        | `{ email, password, as: "player" \| "venue" }`; `as: "venue"` returns `403 NOT_VENUE_STAFF` for player-only accounts |
+| POST   | `/auth/forgot-password`                         | Reset password | Always `202`, so it never reveals whether an email has an account                                                    |
+| GET    | `/me`                                           | Profile        |                                                                                                                      |
+| GET    | `/me/stats`                                     | Home           | Games total, this month, win rate                                                                                    |
+| GET    | `/me/bookings`                                  | Home, Book     | Upcoming bookings                                                                                                    |
+| GET    | `/me/games`                                     | Home           | Recent results with partners and opponents                                                                           |
+| GET    | `/me/open-play`                                 | Home           | Sessions I've joined                                                                                                 |
+| POST   | `/me/venues`                                    | Profile        | A signed-in player registers a venue and becomes its owner                                                           |
+| GET    | `/venues`                                       | Book           |                                                                                                                      |
+| GET    | `/venues/:venueId/availability?date=YYYY-MM-DD` | Book           | Court × hour grid: `OPEN`, `BOOKED`, `MINE`, `OPEN_PLAY`, `BLOCKED`, `PAST`, with price                              |
+| POST   | `/bookings`                                     | Book           | `{ courtId, startsAt, durationMinutes: 60 \| 90 \| 120 }`                                                            |
+| POST   | `/bookings/:id/cancel`                          | Book           | Own bookings, before start time                                                                                      |
+| GET    | `/open-play/sessions?level=&venueId=&from=&to=` | Open play      | Includes spots left and my status                                                                                    |
+| GET    | `/open-play/sessions/:id`                       | Session detail | Courts, players, my status                                                                                           |
+| POST   | `/open-play/sessions/:id/join`                  | Session detail | Enforces capacity and rating range                                                                                   |
+| POST   | `/open-play/sessions/:id/leave`                 | Session detail |                                                                                                                      |
+| GET    | `/open-play/sessions/:id/lineups`               | Lineups        | Live game per court + "Up next"                                                                                      |
+| GET    | `/open-play/sessions/:id/queue`                 | Session detail | `501` until the queue is built                                                                                       |
+| GET    | `/open-play/sessions/:id/queue/me`              | Session detail | `501` until the queue is built                                                                                       |
 
 ### Venue side — `/business/venues/:venueId/...`
 
-Requires the user to be staff at that venue. Routes marked *managers* need `OWNER` or `MANAGER`.
+Requires the user to be staff at that venue. Routes marked _managers_ need `OWNER` or `MANAGER`.
 
-| Method | Path | Screen | Notes |
-|---|---|---|---|
-| GET | `/dashboard?date=` | Dashboard | Revenue, hourly revenue, court use %, bookings, check-ins, courts right now |
-| GET | `/schedule?date=` | Schedule | Bookings and blocks per court, with names |
-| POST | `/blocks` | Schedule | Block a court for `MAINTENANCE` or `EVENT` |
-| DELETE | `/blocks/:blockId` | Schedule | Reopen the court |
-| GET | `/bookings?filter=upcoming\|unpaid\|cancelled` | Bookings | |
-| POST | `/bookings` | Schedule | Walk-in booking, optional `paidWith` |
-| POST | `/bookings/:id/paid` | Bookings | `{ method: CASH \| GCASH \| MAYA \| CARD }` |
-| POST | `/bookings/:id/cancel` | Bookings, Schedule | |
-| GET | `/open-play/sessions?date=` | Open play | |
-| POST | `/open-play/sessions` | Open play | *Managers.* Creates the session and blocks its courts |
-| PATCH | `/open-play/sessions/:id/status` | Open play | `LIVE`, `ENDED`, `CANCELLED` |
-| GET | `/open-play/sessions/:id/roster` | Open play | |
-| POST | `/open-play/sessions/:id/check-ins` | Open play | `{ userId, paidWith? }` |
-| DELETE | `/open-play/sessions/:id/check-ins/:userId` | Open play | Undo check-in |
-| POST | `/open-play/sessions/:id/games` | Lineups | `{ courtId, teamA?, teamB? }`; omit teams to pull from the queue |
-| PATCH | `/games/:gameId/score` | Lineups | Live score |
-| POST | `/games/:gameId/end` | Lineups | Final score |
-| PATCH | `/courts/:courtId` | Settings | *Managers.* Rename or take a court out of service |
-| PUT | `/pricing` | Settings | *Managers.* Replace pricing rules |
+| Method | Path                                           | Screen             | Notes                                                                       |
+| ------ | ---------------------------------------------- | ------------------ | --------------------------------------------------------------------------- |
+| GET    | `/dashboard?date=`                             | Dashboard          | Revenue, hourly revenue, court use %, bookings, check-ins, courts right now |
+| GET    | `/schedule?date=`                              | Schedule           | Bookings and blocks per court, with names                                   |
+| POST   | `/blocks`                                      | Schedule           | Block a court for `MAINTENANCE` or `EVENT`                                  |
+| DELETE | `/blocks/:blockId`                             | Schedule           | Reopen the court                                                            |
+| GET    | `/bookings?filter=upcoming\|unpaid\|cancelled` | Bookings           |                                                                             |
+| POST   | `/bookings`                                    | Schedule           | Walk-in booking, optional `paidWith`                                        |
+| POST   | `/bookings/:id/paid`                           | Bookings           | `{ method: CASH \| GCASH \| MAYA \| CARD }`                                 |
+| POST   | `/bookings/:id/cancel`                         | Bookings, Schedule |                                                                             |
+| GET    | `/open-play/sessions?date=`                    | Open play          |                                                                             |
+| POST   | `/open-play/sessions`                          | Open play          | _Managers._ Creates the session and blocks its courts                       |
+| PATCH  | `/open-play/sessions/:id/status`               | Open play          | `LIVE`, `ENDED`, `CANCELLED`                                                |
+| GET    | `/open-play/sessions/:id/roster`               | Open play          |                                                                             |
+| POST   | `/open-play/sessions/:id/check-ins`            | Open play          | `{ userId, paidWith? }`                                                     |
+| DELETE | `/open-play/sessions/:id/check-ins/:userId`    | Open play          | Undo check-in                                                               |
+| POST   | `/open-play/sessions/:id/games`                | Lineups            | `{ courtId, teamA?, teamB? }`; omit teams to pull from the queue            |
+| PATCH  | `/games/:gameId/score`                         | Lineups            | Live score                                                                  |
+| POST   | `/games/:gameId/end`                           | Lineups            | Final score                                                                 |
+| PATCH  | `/courts/:courtId`                             | Settings           | _Managers._ Rename or take a court out of service                           |
+| PUT    | `/pricing`                                     | Settings           | _Managers._ Replace pricing rules                                           |
 
 Errors always look like `{ "error": { "code": "SESSION_FULL", "message": "This session is full" } }`, so the app can show `message` directly and branch on `code`.
 
@@ -142,6 +142,7 @@ POST /auth/register-venue
   }
 }
 ```
+
 - **Sign-in** returns `{ token, user, venues, mode }`. Show the venue side when `mode` is `venue`; show the "Switch to venue" option whenever `venues` isn't empty.
 - **An existing player opening a venue** → `POST /me/venues` with the same `venue` object.
 
@@ -149,14 +150,14 @@ POST /auth/register-venue
 
 Connect with `io(URL, { auth: { token } })`, then emit `session:watch` with a session id, or `venue:watch` with a venue id (staff only). Each user is automatically in their own room.
 
-| Event | Room | When |
-|---|---|---|
-| `lineup:updated` | session | A game starts or ends; payload is the full lineups response |
-| `game:score` | session | Score changes |
-| `session:updated` | session, venue | Join, leave, check-in, status change |
-| `booking:changed` | venue | Booking created, cancelled or paid |
-| `schedule:changed` | venue | Anything that changes the schedule grid |
-| `queue:your-turn` | user | Player has been put on a court |
+| Event              | Room           | When                                                        |
+| ------------------ | -------------- | ----------------------------------------------------------- |
+| `lineup:updated`   | session        | A game starts or ends; payload is the full lineups response |
+| `game:score`       | session        | Score changes                                               |
+| `session:updated`  | session, venue | Join, leave, check-in, status change                        |
+| `booking:changed`  | venue          | Booking created, cancelled or paid                          |
+| `schedule:changed` | venue          | Anything that changes the schedule grid                     |
+| `queue:your-turn`  | user           | Player has been put on a court                              |
 
 ## The queue (pending)
 

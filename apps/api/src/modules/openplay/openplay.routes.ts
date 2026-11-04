@@ -27,20 +27,32 @@ openPlayRouter.get(
   }),
 );
 
-openPlayRouter.get('/sessions/:sessionId', asyncHandler(async (req, res) => {
-  res.json(await getSession(req.params.sessionId, req.user!.id));
-}));
+openPlayRouter.get(
+  '/sessions/:sessionId',
+  asyncHandler(async (req, res) => {
+    res.json(await getSession(req.params.sessionId, req.user!.id));
+  }),
+);
 
-openPlayRouter.post('/sessions/:sessionId/join', asyncHandler(async (req, res) => {
-  res.status(201).json(await joinSession(req.params.sessionId, req.user!.id));
-}));
+openPlayRouter.post(
+  '/sessions/:sessionId/join',
+  asyncHandler(async (req, res) => {
+    res.status(201).json(await joinSession(req.params.sessionId, req.user!.id));
+  }),
+);
 
-openPlayRouter.post('/sessions/:sessionId/leave', asyncHandler(async (req, res) => {
-  res.json(await leaveSession(req.params.sessionId, req.user!.id));
-}));
+openPlayRouter.post(
+  '/sessions/:sessionId/leave',
+  asyncHandler(async (req, res) => {
+    res.json(await leaveSession(req.params.sessionId, req.user!.id));
+  }),
+);
 
-openPlayRouter.get('/sessions/:sessionId/lineups', asyncHandler(async (req, res) => {
-  res.json(await getLineups(req.params.sessionId));
-}));
+openPlayRouter.get(
+  '/sessions/:sessionId/lineups',
+  asyncHandler(async (req, res) => {
+    res.json(await getLineups(req.params.sessionId));
+  }),
+);
 
 openPlayRouter.use('/sessions/:sessionId/queue', queueRouter);

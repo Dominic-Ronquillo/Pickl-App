@@ -13,12 +13,21 @@ export const venueSetupSchema = z
     peakCentsPerHour: z.number().int().min(0),
     peakStartsAtMinute: z.number().int().min(0).max(1440).default(1020), // 5 PM
   })
-  .refine((v) => v.closesAtMinute > v.opensAtMinute, { message: 'Closing time must be after opening time', path: ['closesAtMinute'] });
+  .refine((v) => v.closesAtMinute > v.opensAtMinute, {
+    message: 'Closing time must be after opening time',
+    path: ['closesAtMinute'],
+  });
 
 export type VenueSetup = z.infer<typeof venueSetupSchema>;
 
 const slugify = (s: string) =>
-  s.toLowerCase().normalize('NFKD').replace(/[^\w\s-]/g, '').trim().replace(/[\s_-]+/g, '-').slice(0, 50) || 'venue';
+  s
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[^\w\s-]/g, '')
+    .trim()
+    .replace(/[\s_-]+/g, '-')
+    .slice(0, 50) || 'venue';
 
 /** Creates a venue with its courts and price bands, and makes `ownerId` its OWNER. Runs inside the caller's transaction. */
 export async function createVenueForOwner(tx: Prisma.TransactionClient, ownerId: string, v: VenueSetup) {

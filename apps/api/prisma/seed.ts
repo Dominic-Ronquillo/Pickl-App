@@ -41,7 +41,16 @@ async function main() {
     create: { venueId: rally.id, userId: owner.id, role: 'OWNER' },
   });
 
-  const players = ['Andrea Cruz', 'Miguel Santos', 'Bea Reyes', 'Paolo Lim', 'Carla Tan', 'Jun Dizon', 'Nina Garcia', 'Rico Bautista'];
+  const players = [
+    'Andrea Cruz',
+    'Miguel Santos',
+    'Bea Reyes',
+    'Paolo Lim',
+    'Carla Tan',
+    'Jun Dizon',
+    'Nina Garcia',
+    'Rico Bautista',
+  ];
   for (const name of players) {
     const email = `${name.toLowerCase().replace(/\s+/g, '.')}@player.test`;
     await prisma.user.upsert({ where: { email }, update: {}, create: { email, name, passwordHash, rating: 3.5 } });

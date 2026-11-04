@@ -13,7 +13,12 @@ meRouter.get(
     const user = await prisma.user.findUniqueOrThrow({
       where: { id: req.user!.id },
       select: {
-        id: true, name: true, email: true, phone: true, rating: true, createdAt: true,
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        rating: true,
+        createdAt: true,
         staffRoles: { select: { venueId: true, role: true, venue: { select: { name: true } } } },
       },
     });
@@ -31,7 +36,9 @@ meRouter.get(
       where: { userId: req.user!.id, game: { status: 'COMPLETED' } },
       select: { team: true, game: { select: { scoreA: true, scoreB: true, endedAt: true } } },
     });
-    const won = games.filter(({ team, game }) => (team === 'A' ? game.scoreA > game.scoreB : game.scoreB > game.scoreA)).length;
+    const won = games.filter(({ team, game }) =>
+      team === 'A' ? game.scoreA > game.scoreB : game.scoreB > game.scoreA,
+    ).length;
     res.json({
       gamesTotal: games.length,
       gamesThisMonth: games.filter((g) => g.game.endedAt && g.game.endedAt >= monthStart).length,
@@ -46,7 +53,10 @@ meRouter.get(
     const bookings = await prisma.booking.findMany({
       where: { userId: req.user!.id, status: { in: ['PENDING', 'CONFIRMED'] }, endsAt: { gte: new Date() } },
       orderBy: { startsAt: 'asc' },
-      include: { court: { select: { number: true, name: true } }, venue: { select: { id: true, name: true, latitude: true, longitude: true } } },
+      include: {
+        court: { select: { number: true, name: true } },
+        venue: { select: { id: true, name: true, latitude: true, longitude: true } },
+      },
     });
     res.json(bookings);
   }),
@@ -63,7 +73,10 @@ meRouter.get(
         team: true,
         game: {
           select: {
-            id: true, scoreA: true, scoreB: true, endedAt: true,
+            id: true,
+            scoreA: true,
+            scoreB: true,
+            endedAt: true,
             players: { select: { team: true, user: { select: { id: true, name: true } } } },
           },
         },
@@ -86,7 +99,11 @@ meRouter.get(
   '/open-play',
   asyncHandler(async (req, res) => {
     const regs = await prisma.openPlayRegistration.findMany({
-      where: { userId: req.user!.id, status: { in: ['JOINED', 'CHECKED_IN'] }, session: { endsAt: { gte: new Date() } } },
+      where: {
+        userId: req.user!.id,
+        status: { in: ['JOINED', 'CHECKED_IN'] },
+        session: { endsAt: { gte: new Date() } },
+      },
       include: { session: { include: { venue: { select: { id: true, name: true } } } } },
       orderBy: { session: { startsAt: 'asc' } },
     });

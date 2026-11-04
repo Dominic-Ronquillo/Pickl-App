@@ -1,2 +1,3 @@
 # Pickl-App
-All in one Pickleball Application 
+
+All in one Pickleball Application

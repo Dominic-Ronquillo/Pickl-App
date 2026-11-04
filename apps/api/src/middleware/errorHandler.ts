@@ -13,13 +13,17 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     });
   }
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
-    if (err.code === 'P2002') return res.status(409).json({ error: { code: 'DUPLICATE', message: 'That already exists' } });
-    if (err.code === 'P2025') return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Record not found' } });
+    if (err.code === 'P2002')
+      return res.status(409).json({ error: { code: 'DUPLICATE', message: 'That already exists' } });
+    if (err.code === 'P2025')
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Record not found' } });
   }
   // Exclusion constraint from prisma/sql/001_no_overlap.sql
   const msg = String(err?.message ?? '');
   if (msg.includes('23P01') || msg.includes('no_overlap')) {
-    return res.status(409).json({ error: { code: 'SLOT_TAKEN', message: 'That court was just booked. Pick another time.' } });
+    return res
+      .status(409)
+      .json({ error: { code: 'SLOT_TAKEN', message: 'That court was just booked. Pick another time.' } });
   }
   console.error(err);
   return res.status(500).json({ error: { code: 'INTERNAL', message: 'Something went wrong on our side' } });

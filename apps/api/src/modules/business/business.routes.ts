@@ -7,7 +7,14 @@ import { ALL_STAFF, MANAGERS, requireVenueRole } from '../../middleware/auth.js'
 import { venueToday } from '../../lib/time.js';
 import { emit, RT } from '../../realtime/socket.js';
 import { cancelBookingAsStaff, createBooking, markBookingPaid } from '../bookings/bookings.service.js';
-import { checkIn, createSession, getRoster, listSessions, setSessionStatus, undoCheckIn } from '../openplay/openplay.service.js';
+import {
+  checkIn,
+  createSession,
+  getRoster,
+  listSessions,
+  setSessionStatus,
+  undoCheckIn,
+} from '../openplay/openplay.service.js';
 import { endGame, startGame, updateScore } from '../games/games.service.js';
 import { getDashboard, getSchedule } from './dashboard.service.js';
 
@@ -18,7 +25,12 @@ import { getDashboard, getSchedule } from './dashboard.service.js';
 export const businessRouter = Router({ mergeParams: true });
 businessRouter.use(requireVenueRole(...ALL_STAFF));
 
-const dateQuery = z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() });
+const dateQuery = z.object({
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+});
 const paymentMethod = z.enum(['CASH', 'GCASH', 'MAYA', 'CARD']);
 
 async function dateOrToday(venueId: string, date?: string) {
@@ -29,15 +41,23 @@ async function dateOrToday(venueId: string, date?: string) {
 
 // ---------- Dashboard and schedule ----------
 
-businessRouter.get('/dashboard', validate({ query: dateQuery }), asyncHandler(async (req, res) => {
-  const { date } = req.query as z.infer<typeof dateQuery>;
-  res.json(await getDashboard(req.params.venueId, await dateOrToday(req.params.venueId, date)));
-}));
+businessRouter.get(
+  '/dashboard',
+  validate({ query: dateQuery }),
+  asyncHandler(async (req, res) => {
+    const { date } = req.query as z.infer<typeof dateQuery>;
+    res.json(await getDashboard(req.params.venueId, await dateOrToday(req.params.venueId, date)));
+  }),
+);
 
-businessRouter.get('/schedule', validate({ query: dateQuery }), asyncHandler(async (req, res) => {
-  const { date } = req.query as z.infer<typeof dateQuery>;
-  res.json(await getSchedule(req.params.venueId, await dateOrToday(req.params.venueId, date)));
-}));
+businessRouter.get(
+  '/schedule',
+  validate({ query: dateQuery }),
+  asyncHandler(async (req, res) => {
+    const { date } = req.query as z.infer<typeof dateQuery>;
+    res.json(await getSchedule(req.params.venueId, await dateOrToday(req.params.venueId, date)));
+  }),
+);
 
 // ---------- Court blocks (maintenance, events) ----------
 
@@ -49,45 +69,67 @@ const blockBody = z.object({
   note: z.string().max(200).optional(),
 });
 
-businessRouter.post('/blocks', validate({ body: blockBody }), asyncHandler(async (req, res) => {
-  const b = req.body as z.infer<typeof blockBody>;
-  const court = await prisma.court.findFirst({ where: { id: b.courtId, venueId: req.params.venueId } });
-  if (!court) throw notFound('Court');
-  const clash = await prisma.booking.findFirst({
-    where: { courtId: b.courtId, status: { in: ['PENDING', 'CONFIRMED'] }, startsAt: { lt: b.endsAt }, endsAt: { gt: b.startsAt } },
-  });
-  if (clash) throw conflict(`Court ${court.number} has a booking then. Cancel or move it first.`, 'COURT_BOOKED');
-  const block = await prisma.courtBlock.create({ data: { ...b, createdById: req.user!.id } });
-  emit.venue(req.params.venueId, RT.SCHEDULE_CHANGED, { courtId: b.courtId });
-  res.status(201).json(block);
-}));
+businessRouter.post(
+  '/blocks',
+  validate({ body: blockBody }),
+  asyncHandler(async (req, res) => {
+    const b = req.body as z.infer<typeof blockBody>;
+    const court = await prisma.court.findFirst({ where: { id: b.courtId, venueId: req.params.venueId } });
+    if (!court) throw notFound('Court');
+    const clash = await prisma.booking.findFirst({
+      where: {
+        courtId: b.courtId,
+        status: { in: ['PENDING', 'CONFIRMED'] },
+        startsAt: { lt: b.endsAt },
+        endsAt: { gt: b.startsAt },
+      },
+    });
+    if (clash) throw conflict(`Court ${court.number} has a booking then. Cancel or move it first.`, 'COURT_BOOKED');
+    const block = await prisma.courtBlock.create({ data: { ...b, createdById: req.user!.id } });
+    emit.venue(req.params.venueId, RT.SCHEDULE_CHANGED, { courtId: b.courtId });
+    res.status(201).json(block);
+  }),
+);
 
-businessRouter.delete('/blocks/:blockId', asyncHandler(async (req, res) => {
-  const block = await prisma.courtBlock.findFirst({ where: { id: req.params.blockId, court: { venueId: req.params.venueId }, reason: { not: 'OPEN_PLAY' } } });
-  if (!block) throw notFound('Block');
-  await prisma.courtBlock.delete({ where: { id: block.id } });
-  emit.venue(req.params.venueId, RT.SCHEDULE_CHANGED, { courtId: block.courtId });
-  res.status(204).end();
-}));
+businessRouter.delete(
+  '/blocks/:blockId',
+  asyncHandler(async (req, res) => {
+    const block = await prisma.courtBlock.findFirst({
+      where: { id: req.params.blockId, court: { venueId: req.params.venueId }, reason: { not: 'OPEN_PLAY' } },
+    });
+    if (!block) throw notFound('Block');
+    await prisma.courtBlock.delete({ where: { id: block.id } });
+    emit.venue(req.params.venueId, RT.SCHEDULE_CHANGED, { courtId: block.courtId });
+    res.status(204).end();
+  }),
+);
 
 // ---------- Bookings ----------
 
 const bookingsQuery = z.object({ filter: z.enum(['upcoming', 'unpaid', 'cancelled']).default('upcoming') });
 
-businessRouter.get('/bookings', validate({ query: bookingsQuery }), asyncHandler(async (req, res) => {
-  const { filter } = req.query as z.infer<typeof bookingsQuery>;
-  const where =
-    filter === 'cancelled'
-      ? { status: 'CANCELLED' as const }
-      : { status: { in: ['PENDING' as const, 'CONFIRMED' as const] }, endsAt: { gte: new Date() }, ...(filter === 'unpaid' ? { paymentStatus: 'UNPAID' as const } : {}) };
-  const bookings = await prisma.booking.findMany({
-    where: { venueId: req.params.venueId, ...where },
-    orderBy: { startsAt: filter === 'cancelled' ? 'desc' : 'asc' },
-    take: 100,
-    include: { court: { select: { number: true } }, user: { select: { id: true, name: true, phone: true } } },
-  });
-  res.json(bookings);
-}));
+businessRouter.get(
+  '/bookings',
+  validate({ query: bookingsQuery }),
+  asyncHandler(async (req, res) => {
+    const { filter } = req.query as z.infer<typeof bookingsQuery>;
+    const where =
+      filter === 'cancelled'
+        ? { status: 'CANCELLED' as const }
+        : {
+            status: { in: ['PENDING' as const, 'CONFIRMED' as const] },
+            endsAt: { gte: new Date() },
+            ...(filter === 'unpaid' ? { paymentStatus: 'UNPAID' as const } : {}),
+          };
+    const bookings = await prisma.booking.findMany({
+      where: { venueId: req.params.venueId, ...where },
+      orderBy: { startsAt: filter === 'cancelled' ? 'desc' : 'asc' },
+      take: 100,
+      include: { court: { select: { number: true } }, user: { select: { id: true, name: true, phone: true } } },
+    });
+    res.json(bookings);
+  }),
+);
 
 const walkInBody = z.object({
   courtId: z.string(),
@@ -98,33 +140,55 @@ const walkInBody = z.object({
   paidWith: paymentMethod.optional(),
 });
 
-businessRouter.post('/bookings', validate({ body: walkInBody }), asyncHandler(async (req, res) => {
-  const b = req.body as z.infer<typeof walkInBody>;
-  const court = await prisma.court.findFirst({ where: { id: b.courtId, venueId: req.params.venueId } });
-  if (!court) throw notFound('Court');
-  let booking = await createBooking({
-    courtId: b.courtId, startsAt: b.startsAt, durationMinutes: b.durationMinutes,
-    userId: b.userId, guestName: b.guestName, source: 'WALK_IN', createdById: req.user!.id,
-  });
-  if (b.paidWith) booking = { ...booking, ...(await markBookingPaid(booking.id, req.params.venueId, req.user!.id, b.paidWith)) };
-  res.status(201).json(booking);
-}));
+businessRouter.post(
+  '/bookings',
+  validate({ body: walkInBody }),
+  asyncHandler(async (req, res) => {
+    const b = req.body as z.infer<typeof walkInBody>;
+    const court = await prisma.court.findFirst({ where: { id: b.courtId, venueId: req.params.venueId } });
+    if (!court) throw notFound('Court');
+    let booking = await createBooking({
+      courtId: b.courtId,
+      startsAt: b.startsAt,
+      durationMinutes: b.durationMinutes,
+      userId: b.userId,
+      guestName: b.guestName,
+      source: 'WALK_IN',
+      createdById: req.user!.id,
+    });
+    if (b.paidWith)
+      booking = { ...booking, ...(await markBookingPaid(booking.id, req.params.venueId, req.user!.id, b.paidWith)) };
+    res.status(201).json(booking);
+  }),
+);
 
-businessRouter.post('/bookings/:bookingId/paid', validate({ body: z.object({ method: paymentMethod }) }), asyncHandler(async (req, res) => {
-  res.json(await markBookingPaid(req.params.bookingId, req.params.venueId, req.user!.id, req.body.method));
-}));
+businessRouter.post(
+  '/bookings/:bookingId/paid',
+  validate({ body: z.object({ method: paymentMethod }) }),
+  asyncHandler(async (req, res) => {
+    res.json(await markBookingPaid(req.params.bookingId, req.params.venueId, req.user!.id, req.body.method));
+  }),
+);
 
-businessRouter.post('/bookings/:bookingId/cancel', validate({ body: z.object({ reason: z.string().max(200).optional() }) }), asyncHandler(async (req, res) => {
-  res.json(await cancelBookingAsStaff(req.params.bookingId, req.params.venueId, req.body.reason));
-}));
+businessRouter.post(
+  '/bookings/:bookingId/cancel',
+  validate({ body: z.object({ reason: z.string().max(200).optional() }) }),
+  asyncHandler(async (req, res) => {
+    res.json(await cancelBookingAsStaff(req.params.bookingId, req.params.venueId, req.body.reason));
+  }),
+);
 
 // ---------- Open play ----------
 
-businessRouter.get('/open-play/sessions', validate({ query: dateQuery }), asyncHandler(async (req, res) => {
-  const { date } = req.query as z.infer<typeof dateQuery>;
-  const from = date ? new Date(`${date}T00:00:00Z`) : new Date();
-  res.json(await listSessions({ from, to: new Date(from.getTime() + 7 * 86400_000), venueId: req.params.venueId }));
-}));
+businessRouter.get(
+  '/open-play/sessions',
+  validate({ query: dateQuery }),
+  asyncHandler(async (req, res) => {
+    const { date } = req.query as z.infer<typeof dateQuery>;
+    const from = date ? new Date(`${date}T00:00:00Z`) : new Date();
+    res.json(await listSessions({ from, to: new Date(from.getTime() + 7 * 86400_000), venueId: req.params.venueId }));
+  }),
+);
 
 const sessionBody = z
   .object({
@@ -140,9 +204,14 @@ const sessionBody = z
   })
   .refine((v) => v.endsAt > v.startsAt, { message: 'End time must be after start time', path: ['endsAt'] });
 
-businessRouter.post('/open-play/sessions', requireVenueRole(...MANAGERS), validate({ body: sessionBody }), asyncHandler(async (req, res) => {
-  res.status(201).json(await createSession(req.params.venueId, req.user!.id, req.body));
-}));
+businessRouter.post(
+  '/open-play/sessions',
+  requireVenueRole(...MANAGERS),
+  validate({ body: sessionBody }),
+  asyncHandler(async (req, res) => {
+    res.status(201).json(await createSession(req.params.venueId, req.user!.id, req.body));
+  }),
+);
 
 businessRouter.patch(
   '/open-play/sessions/:sessionId/status',
@@ -152,9 +221,12 @@ businessRouter.patch(
   }),
 );
 
-businessRouter.get('/open-play/sessions/:sessionId/roster', asyncHandler(async (req, res) => {
-  res.json(await getRoster(req.params.venueId, req.params.sessionId));
-}));
+businessRouter.get(
+  '/open-play/sessions/:sessionId/roster',
+  asyncHandler(async (req, res) => {
+    res.json(await getRoster(req.params.venueId, req.params.sessionId));
+  }),
+);
 
 businessRouter.post(
   '/open-play/sessions/:sessionId/check-ins',
@@ -164,9 +236,12 @@ businessRouter.post(
   }),
 );
 
-businessRouter.delete('/open-play/sessions/:sessionId/check-ins/:userId', asyncHandler(async (req, res) => {
-  res.json(await undoCheckIn(req.params.venueId, req.params.sessionId, req.params.userId));
-}));
+businessRouter.delete(
+  '/open-play/sessions/:sessionId/check-ins/:userId',
+  asyncHandler(async (req, res) => {
+    res.json(await undoCheckIn(req.params.venueId, req.params.sessionId, req.params.userId));
+  }),
+);
 
 // ---------- Games (lineups and scores) ----------
 
@@ -176,19 +251,31 @@ const startGameBody = z.object({
   teamB: z.tuple([z.string(), z.string()]).optional(),
 });
 
-businessRouter.post('/open-play/sessions/:sessionId/games', validate({ body: startGameBody }), asyncHandler(async (req, res) => {
-  res.status(201).json(await startGame(req.params.venueId, req.params.sessionId, req.body));
-}));
+businessRouter.post(
+  '/open-play/sessions/:sessionId/games',
+  validate({ body: startGameBody }),
+  asyncHandler(async (req, res) => {
+    res.status(201).json(await startGame(req.params.venueId, req.params.sessionId, req.body));
+  }),
+);
 
 const scoreBody = z.object({ scoreA: z.number().int().min(0).max(99), scoreB: z.number().int().min(0).max(99) });
 
-businessRouter.patch('/games/:gameId/score', validate({ body: scoreBody }), asyncHandler(async (req, res) => {
-  res.json(await updateScore(req.params.venueId, req.params.gameId, req.body.scoreA, req.body.scoreB));
-}));
+businessRouter.patch(
+  '/games/:gameId/score',
+  validate({ body: scoreBody }),
+  asyncHandler(async (req, res) => {
+    res.json(await updateScore(req.params.venueId, req.params.gameId, req.body.scoreA, req.body.scoreB));
+  }),
+);
 
-businessRouter.post('/games/:gameId/end', validate({ body: scoreBody }), asyncHandler(async (req, res) => {
-  res.json(await endGame(req.params.venueId, req.params.gameId, req.body.scoreA, req.body.scoreB));
-}));
+businessRouter.post(
+  '/games/:gameId/end',
+  validate({ body: scoreBody }),
+  asyncHandler(async (req, res) => {
+    res.json(await endGame(req.params.venueId, req.params.gameId, req.body.scoreA, req.body.scoreB));
+  }),
+);
 
 // ---------- Venue settings (managers) ----------
 
@@ -213,12 +300,17 @@ const pricingBody = z.array(
   }),
 );
 
-businessRouter.put('/pricing', requireVenueRole(...MANAGERS), validate({ body: pricingBody }), asyncHandler(async (req, res) => {
-  const venueId = req.params.venueId;
-  const rules = req.body as z.infer<typeof pricingBody>;
-  await prisma.$transaction([
-    prisma.pricingRule.deleteMany({ where: { venueId } }),
-    prisma.pricingRule.createMany({ data: rules.map((r) => ({ ...r, venueId })) }),
-  ]);
-  res.json(await prisma.pricingRule.findMany({ where: { venueId } }));
-}));
+businessRouter.put(
+  '/pricing',
+  requireVenueRole(...MANAGERS),
+  validate({ body: pricingBody }),
+  asyncHandler(async (req, res) => {
+    const venueId = req.params.venueId;
+    const rules = req.body as z.infer<typeof pricingBody>;
+    await prisma.$transaction([
+      prisma.pricingRule.deleteMany({ where: { venueId } }),
+      prisma.pricingRule.createMany({ data: rules.map((r) => ({ ...r, venueId })) }),
+    ]);
+    res.json(await prisma.pricingRule.findMany({ where: { venueId } }));
+  }),
+);

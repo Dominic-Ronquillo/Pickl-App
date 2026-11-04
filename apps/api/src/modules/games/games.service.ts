@@ -20,25 +20,40 @@ export async function getLineups(sessionId: string) {
 
   const groups = await queue.peekNextGroups(sessionId, 3);
   const ids = [...new Set(groups.flat())];
-  const users = ids.length ? await prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } }) : [];
+  const users = ids.length
+    ? await prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } })
+    : [];
   const byId = new Map(users.map((u) => [u.id, u]));
 
   return {
-    session: { id: session.id, status: session.status, startsAt: session.startsAt, endsAt: session.endsAt, venue: session.venue },
+    session: {
+      id: session.id,
+      status: session.status,
+      startsAt: session.startsAt,
+      endsAt: session.endsAt,
+      venue: session.venue,
+    },
     courts: session.courts
       .map(({ court }) => {
         const g = session.games.find((x) => x.courtId === court.id);
         return {
           ...court,
           game: g && {
-            id: g.id, sequence: g.sequence, scoreA: g.scoreA, scoreB: g.scoreB, startedAt: g.startedAt,
+            id: g.id,
+            sequence: g.sequence,
+            scoreA: g.scoreA,
+            scoreB: g.scoreB,
+            startedAt: g.startedAt,
             teamA: g.players.filter((p) => p.team === 'A').map((p) => p.user),
             teamB: g.players.filter((p) => p.team === 'B').map((p) => p.user),
           },
         };
       })
       .sort((a, b) => a.number - b.number),
-    upNext: groups.map((g) => ({ teamA: g.slice(0, 2).map((id) => byId.get(id)), teamB: g.slice(2, 4).map((id) => byId.get(id)) })),
+    upNext: groups.map((g) => ({
+      teamA: g.slice(0, 2).map((id) => byId.get(id)),
+      teamB: g.slice(2, 4).map((id) => byId.get(id)),
+    })),
     queueReady: false, // flips to true once a real QueueStrategy is plugged in
   };
 }
@@ -55,7 +70,8 @@ export async function startGame(venueId: string, sessionId: string, input: Start
   if (input.teamA && input.teamB) players = [...input.teamA, ...input.teamB];
   else {
     const next = await queue.takeNextGroup(sessionId, input.courtId);
-    if (!next) throw new HttpError(409, 'No group is ready in the queue. Pick the four players instead.', 'QUEUE_EMPTY');
+    if (!next)
+      throw new HttpError(409, 'No group is ready in the queue. Pick the four players instead.', 'QUEUE_EMPTY');
     players = next;
   }
   if (new Set(players).size !== 4) throw new HttpError(422, 'A game needs four different players', 'BAD_LINEUP');
@@ -67,13 +83,16 @@ export async function startGame(venueId: string, sessionId: string, input: Start
         include: { courts: { where: { courtId: input.courtId } } },
       });
       if (!session) throw notFound('Session');
-      if (session.status !== 'LIVE') throw new HttpError(422, 'Start the session before starting games', 'SESSION_NOT_LIVE');
+      if (session.status !== 'LIVE')
+        throw new HttpError(422, 'Start the session before starting games', 'SESSION_NOT_LIVE');
       if (!session.courts.length) throw new HttpError(422, 'That court isn’t part of this session', 'BAD_COURT');
 
       const busyCourt = await tx.game.findFirst({ where: { courtId: input.courtId, status: 'IN_PROGRESS' } });
       if (busyCourt) throw conflict('That court already has a game in progress', 'COURT_BUSY');
 
-      const checkedIn = await tx.openPlayRegistration.count({ where: { sessionId, userId: { in: players }, status: 'CHECKED_IN' } });
+      const checkedIn = await tx.openPlayRegistration.count({
+        where: { sessionId, userId: { in: players }, status: 'CHECKED_IN' },
+      });
       if (checkedIn !== 4) throw new HttpError(422, 'All four players must be checked in', 'NOT_CHECKED_IN');
 
       const busyPlayer = await tx.gamePlayer.findFirst({
@@ -85,7 +104,9 @@ export async function startGame(venueId: string, sessionId: string, input: Start
       const sequence = (await tx.game.count({ where: { sessionId } })) + 1;
       return tx.game.create({
         data: {
-          sessionId, courtId: input.courtId, sequence,
+          sessionId,
+          courtId: input.courtId,
+          sequence,
           players: { create: players.map((userId, i) => ({ userId, team: i < 2 ? ('A' as const) : ('B' as const) })) },
         },
         include: { players: { select: playerSelect }, court: { select: { number: true } } },
@@ -94,7 +115,8 @@ export async function startGame(venueId: string, sessionId: string, input: Start
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
 
-  for (const p of game.players) emit.user(p.user.id, RT.YOUR_TURN, { sessionId, courtNumber: game.court.number, gameId: game.id });
+  for (const p of game.players)
+    emit.user(p.user.id, RT.YOUR_TURN, { sessionId, courtNumber: game.court.number, gameId: game.id });
   emit.session(sessionId, RT.LINEUP_UPDATED, await getLineups(sessionId));
   return game;
 }
@@ -116,7 +138,10 @@ export async function updateScore(venueId: string, gameId: string, scoreA: numbe
 export async function endGame(venueId: string, gameId: string, scoreA: number, scoreB: number) {
   const game = await findVenueGame(venueId, gameId);
   if (game.status !== 'IN_PROGRESS') throw new HttpError(422, 'This game has already ended', 'GAME_ENDED');
-  const updated = await prisma.game.update({ where: { id: gameId }, data: { scoreA, scoreB, status: 'COMPLETED', endedAt: new Date() } });
+  const updated = await prisma.game.update({
+    where: { id: gameId },
+    data: { scoreA, scoreB, status: 'COMPLETED', endedAt: new Date() },
+  });
   // TODO: update player ratings here once a rating formula is chosen.
   if (game.sessionId) {
     await queue.onGameEnded(game.sessionId, gameId);

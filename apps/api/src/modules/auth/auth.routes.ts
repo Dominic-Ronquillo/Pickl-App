@@ -10,7 +10,10 @@ import { createVenueForOwner, venueSetupSchema } from '../venues/venue-setup.ser
 export const authRouter = Router();
 
 const SKILL_RATING = { BEGINNER: 2.5, INTERMEDIATE: 3.5, ADVANCED: 4.25 } as const;
-const phone = z.string().trim().regex(/^[+\d][\d\s-]{6,19}$/, 'Enter a valid mobile number');
+const phone = z
+  .string()
+  .trim()
+  .regex(/^[+\d][\d\s-]{6,19}$/, 'Enter a valid mobile number');
 const accountFields = {
   name: z.string().trim().min(2).max(80),
   email: z.string().trim().email().toLowerCase(),
@@ -20,7 +23,14 @@ const accountFields = {
 async function sessionPayload(userId: string) {
   const user = await prisma.user.findUniqueOrThrow({
     where: { id: userId },
-    select: { id: true, name: true, email: true, phone: true, rating: true, staffRoles: { select: { role: true, venue: { select: { id: true, name: true } } } } },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      rating: true,
+      staffRoles: { select: { role: true, venue: { select: { id: true, name: true } } } },
+    },
   });
   const { staffRoles, ...rest } = user;
   return {
@@ -64,7 +74,11 @@ authRouter.post(
   asyncHandler(async (req, res) => {
     const { name, email, phone, password, venue } = req.body as z.infer<typeof registerVenueBody>;
     if (await prisma.user.findUnique({ where: { email } })) {
-      throw new HttpError(409, 'An account with this email already exists. Sign in, then register your venue from your profile.', 'EMAIL_TAKEN');
+      throw new HttpError(
+        409,
+        'An account with this email already exists. Sign in, then register your venue from your profile.',
+        'EMAIL_TAKEN',
+      );
     }
     const passwordHash = await bcrypt.hash(password, 12);
     const userId = await prisma.$transaction(async (tx) => {
@@ -95,7 +109,11 @@ authRouter.post(
       throw new HttpError(401, 'Email or password is incorrect.', 'BAD_CREDENTIALS');
     }
     if (as === 'venue' && user.staffRoles.length === 0) {
-      throw new HttpError(403, 'This account doesn’t manage a venue. Sign in as a player, then register your venue from your profile.', 'NOT_VENUE_STAFF');
+      throw new HttpError(
+        403,
+        'This account doesn’t manage a venue. Sign in as a player, then register your venue from your profile.',
+        'NOT_VENUE_STAFF',
+      );
     }
     res.json({ ...(await sessionPayload(user.id)), mode: as });
   }),
