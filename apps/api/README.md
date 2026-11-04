@@ -130,7 +130,7 @@ Errors always look like `{ "error": { "code": "SESSION_FULL", "message": "This s
 
 ## Accounts: players and venue owners
 
-There is one account type. A user is a **player** by default and becomes a **venue owner** (or manager/staff) through `VenueStaff`. That keeps sign-in simple and lets owners play too: one login, and the app offers a switch between the player and venue sides.
+There is one account type. A user is a **player** by default and becomes a **venue owner** (or manager/staff) through `VenueStaff`. That keeps accounts simple and lets owners play too: the same login works in the player app and the venue app.
 
 - **Player sign-up** → `POST /auth/register`, then the app opens the player side.
 - **Venue sign-up** is two steps in the app (owner account, then venue details) but one request:
@@ -147,7 +147,7 @@ POST /auth/register-venue
 }
 ```
 
-- **Sign-in** returns `{ token, user, venues, mode }`. Show the venue side when `mode` is `venue`; show the "Switch to venue" option whenever `venues` isn't empty.
+- **Sign-in** returns `{ token, user, venues, mode }`. The player app signs in with `as: "player"`. The venue app signs in with `as: "venue"`, which returns `403 NOT_VENUE_STAFF` for accounts without a staff role. The player app links to the venue app whenever `venues` isn't empty.
 - **An existing player opening a venue** → `POST /me/venues` with the same `venue` object.
 
 ## Real-time (Socket.IO)

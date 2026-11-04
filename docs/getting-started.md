@@ -32,10 +32,11 @@ npm run dev
 
 | URL                              | What                                       |
 | -------------------------------- | ------------------------------------------ |
-| http://localhost:5173            | Web app                                    |
+| http://localhost:5173            | Player app                                 |
+| http://localhost:5174            | Venue app (owners and staff)               |
 | http://localhost:4000/api/health | API health (`{"ok":true,"database":"up"}`) |
 
-In development, Vite proxies `/api` and `/socket.io` to the API, so the browser only talks to `localhost:5173`.
+In development, Vite proxies `/api` and `/socket.io` to the API, so each app talks to the API through its own origin.
 
 ### Seed data
 
@@ -52,23 +53,25 @@ Open play sessions are only seeded once. Run `npm run db:reset -w @courtside/api
 
 ### API (`apps/api/.env`)
 
-| Variable          | Default                 | Notes                                                                                               |
-| ----------------- | ----------------------- | --------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`    | —                       | Required. Connection the API uses. On Supabase: transaction pooler, port 6543, `?pgbouncer=true`    |
-| `DIRECT_URL`      | —                       | Required by Prisma Migrate. On Supabase: session pooler, port 5432. Locally: same as `DATABASE_URL` |
-| `JWT_SECRET`      | —                       | Required, 32+ characters                                                                            |
-| `JWT_EXPIRES_IN`  | `7d`                    | Any [vercel/ms](https://github.com/vercel/ms) duration                                              |
-| `PORT`            | `4000`                  |                                                                                                     |
-| `CORS_ORIGIN`     | `http://localhost:5173` | Comma-separated list of allowed origins, or `*`                                                     |
-| `LOG_LEVEL`       | `info`                  | `fatal`, `error`, `warn`, `info`, `debug`, `trace`, `silent`                                        |
-| `AUTH_RATE_LIMIT` | `20`                    | Sign-in and sign-up attempts per IP per 15 minutes                                                  |
-| `NODE_ENV`        | `development`           | `production` switches logs to JSON                                                                  |
+| Variable          | Default                                       | Notes                                                                                               |
+| ----------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`    | —                                             | Required. Connection the API uses. On Supabase: transaction pooler, port 6543, `?pgbouncer=true`    |
+| `DIRECT_URL`      | —                                             | Required by Prisma Migrate. On Supabase: session pooler, port 5432. Locally: same as `DATABASE_URL` |
+| `JWT_SECRET`      | —                                             | Required, 32+ characters                                                                            |
+| `JWT_EXPIRES_IN`  | `7d`                                          | Any [vercel/ms](https://github.com/vercel/ms) duration                                              |
+| `PORT`            | `4000`                                        |                                                                                                     |
+| `CORS_ORIGIN`     | `http://localhost:5173,http://localhost:5174` | Comma-separated list of allowed origins, or `*`                                                     |
+| `LOG_LEVEL`       | `info`                                        | `fatal`, `error`, `warn`, `info`, `debug`, `trace`, `silent`                                        |
+| `AUTH_RATE_LIMIT` | `20`                                          | Sign-in and sign-up attempts per IP per 15 minutes                                                  |
+| `NODE_ENV`        | `development`                                 | `production` switches logs to JSON                                                                  |
 
-### Web (`apps/web/.env`, optional)
+### Web apps (`apps/player/.env`, `apps/venue/.env`, optional)
 
-| Variable       | Default | Notes                                                                      |
-| -------------- | ------- | -------------------------------------------------------------------------- |
-| `VITE_API_URL` | empty   | Set only when the API is on another origin, e.g. `https://api.example.com` |
+| Variable              | Default                 | Notes                                                                      |
+| --------------------- | ----------------------- | -------------------------------------------------------------------------- |
+| `VITE_API_URL`        | empty                   | Set only when the API is on another origin, e.g. `https://api.example.com` |
+| `VITE_PLAYER_APP_URL` | `http://localhost:5173` | Where the player app lives (for links from the venue app)                  |
+| `VITE_VENUE_APP_URL`  | `http://localhost:5174` | Where the venue app lives (for links from the player app)                  |
 
 ## Everyday tasks
 
@@ -76,8 +79,8 @@ Open play sessions are only seeded once. Run `npm run db:reset -w @courtside/api
 | -------------------------- | ------------------------------------------------------------------------------------ |
 | Change the database schema | Edit `schema.prisma`, then `npm run db:migrate -w @courtside/api -- --name <change>` |
 | Browse the database        | `npm run db:studio -w @courtside/api`                                                |
-| Run one workspace's tests  | `npm test -w @courtside/api` or `-w @courtside/web`                                  |
-| Watch tests while coding   | `npm run test:watch -w @courtside/web`                                               |
+| Run one workspace's tests  | `npm test -w @courtside/api` (or `player`, `venue`, `client`)                        |
+| Watch tests while coding   | `npm run test:watch -w @courtside/player`                                            |
 | Fix formatting             | `npm run format`                                                                     |
 
 ## Troubleshooting

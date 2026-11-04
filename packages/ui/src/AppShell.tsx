@@ -59,7 +59,7 @@ export function AppShell({
       >
         <div className="mx-auto flex max-w-5xl items-center gap-6 px-4 py-3">
           <NavLink to="/" aria-label="Courtside home">
-            <Logo light={court} product={product} />
+            <Logo light={court} product={product} compact />
           </NavLink>
           <nav aria-label="Main" className="hidden flex-1 gap-1 sm:flex">
             {nav.map((n) => (
@@ -136,7 +136,7 @@ export function OtherAppLink({ href, children, light }: { href: string; children
     <a
       href={href}
       className={cx(
-        'rounded-full px-3 py-1.5 text-sm font-semibold',
+        'rounded-full px-3 py-1.5 text-sm font-semibold whitespace-nowrap',
         light ? 'bg-white text-court-deep' : 'border-[1.5px] border-line hover:bg-card',
       )}
     >
