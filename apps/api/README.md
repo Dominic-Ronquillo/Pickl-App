@@ -3,18 +3,23 @@
 Backend for the Courtside pickleball app: player side (open play, court booking, lineups, stats)
 and venue side (dashboard, schedule, check-ins, bookings, scoring).
 
-**Stack:** Node.js 20+, TypeScript, Express, PostgreSQL + Prisma, Socket.IO for live updates, Zod for validation, JWT auth.
+**Stack:** Node.js 20.19+, TypeScript, Express, Prisma on PostgreSQL (Supabase in hosted environments, Docker locally), Socket.IO for live updates, Zod for validation, JWT auth, pino logs.
 
 ## Getting started
 
+From the repository root (see [docs/getting-started.md](../../docs/getting-started.md) for details):
+
 ```bash
-cp .env.example .env            # set JWT_SECRET
-docker compose up -d            # Postgres on :5432
 npm install
-npm run db:migrate              # creates tables and the no-double-booking constraints
-npm run db:seed                 # 3 venues, 4 courts each, one owner, 8 players
-npm run dev                     # http://localhost:4000/api
+npm run db:up                                  # Postgres on :5432 (Docker)
+cp apps/api/.env.example apps/api/.env         # set JWT_SECRET
+npm run db:migrate -w @courtside/api           # tables, no-double-booking constraints, RLS
+npm run db:seed -w @courtside/api              # 3 venues, 8 players, a live open play session
+npm run dev:api                                # http://localhost:4000/api
 ```
+
+For Supabase, set `DATABASE_URL` (transaction pooler, `:6543`, `?pgbouncer=true`) and `DIRECT_URL`
+(session pooler, `:5432`); see [docs/deployment.md](../../docs/deployment.md#database-supabase).
 
 Seed logins (password `password123`): `owner@rallyhouse.test` (venue side), `andrea.cruz@player.test` (player).
 
