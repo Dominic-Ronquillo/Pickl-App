@@ -1,4 +1,8 @@
-# Courtside
+# Pickl-App
+
+All in one Pickleball Application
+
+## Courtside
 
 Courtside is a pickleball platform with two web apps: one for **players** and one for **venues**.
 
