@@ -54,7 +54,7 @@ export async function getLineups(sessionId: string) {
       teamA: g.slice(0, 2).map((id) => byId.get(id)),
       teamB: g.slice(2, 4).map((id) => byId.get(id)),
     })),
-    queueReady: false, // flips to true once a real QueueStrategy is plugged in
+    queueReady: true,
   };
 }
 
@@ -69,7 +69,7 @@ export async function startGame(venueId: string, sessionId: string, input: Start
   let players: string[];
   if (input.teamA && input.teamB) players = [...input.teamA, ...input.teamB];
   else {
-    const next = await queue.takeNextGroup(sessionId, input.courtId);
+    const next = await queue.pickNextGroup(sessionId, input.courtId);
     if (!next)
       throw new HttpError(409, 'No group is ready in the queue. Pick the four players instead.', 'QUEUE_EMPTY');
     players = next;
@@ -115,6 +115,7 @@ export async function startGame(venueId: string, sessionId: string, input: Start
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
 
+  await queue.onGameStarted(sessionId, game.id);
   for (const p of game.players)
     emit.user(p.user.id, RT.YOUR_TURN, { sessionId, courtNumber: game.court.number, gameId: game.id });
   emit.session(sessionId, RT.LINEUP_UPDATED, await getLineups(sessionId));

@@ -82,6 +82,12 @@ enum Team {
   B
 }
 
+enum QueueStatus {
+  WAITING // paddle is in the stack
+  HOLDING // won and is staying on courtId for the next game
+  PLAYING // on courtId right now
+}
+
 // ---------- People ----------
 
 model User {
@@ -101,6 +107,7 @@ model User {
   createdBlocks   CourtBlock[]
   registrations   OpenPlayRegistration[]
   gamesPlayed     GamePlayer[]
+  queueEntries    QueueEntry[]
   payments        Payment[]              @relation("PaymentPayer")
   recordedPayments Payment[]             @relation("PaymentRecordedBy")
 }
@@ -152,6 +159,7 @@ model Court {
   blocks        CourtBlock[]
   games         Game[]
   sessionCourts OpenPlayCourt[]
+  queueEntries  QueueEntry[]
 
   @@unique([venueId, number])
 }
@@ -246,6 +254,7 @@ model OpenPlaySession {
   blocks        CourtBlock[]
   registrations OpenPlayRegistration[]
   games         Game[]
+  queueEntries  QueueEntry[]
 
   @@index([venueId, startsAt])
   @@index([startsAt, skillLevel])
@@ -335,7 +344,23 @@ model Payment {
   @@index([createdAt])
 }
 
-// ---------- Queue (pending) ----------
-// The open play queue tables go here once the queue rules are defined.
-// The application code talks to the queue only through src/modules/queue/queue.types.ts,
-// so adding these tables won't change the session, game or lineup modules.
+// ---------- Open play queue ----------
+// Rules live in src/modules/queue/rotation.ts; see docs/queue-rules.md.
+// One row per checked-in player. Order in line is enteredAt.
+
+model QueueEntry {
+  id        String      @id @default(cuid())
+  sessionId String
+  userId    String
+  status    QueueStatus @default(WAITING)
+  courtId   String? // HOLDING / PLAYING: the court the player is on
+  streak    Int         @default(0) // consecutive games on court
+  enteredAt DateTime    @default(now()) @db.Timestamptz(3)
+
+  session OpenPlaySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User            @relation(fields: [userId], references: [id])
+  court   Court?          @relation(fields: [courtId], references: [id])
+
+  @@unique([sessionId, userId])
+  @@index([sessionId, status, enteredAt])
+}

@@ -56,7 +56,100 @@ async function main() {
     await prisma.user.upsert({ where: { email }, update: {}, create: { email, name, passwordHash, rating: 3.5 } });
   }
 
+  await seedOpenPlay(owner.id);
+
   console.log('Seeded. Sign in as owner@rallyhouse.test or andrea.cruz@player.test with password123');
+}
+
+/**
+ * Open play demo data, created once (skipped when sessions already exist):
+ * a LIVE session at Rally House started an hour ago with all 8 players checked in and queued,
+ * plus upcoming sessions tomorrow at every venue.
+ */
+async function seedOpenPlay(ownerId: string) {
+  if (await prisma.openPlaySession.count()) return;
+  const hour = 3600_000;
+  const now = new Date();
+  now.setMinutes(0, 0, 0);
+  const tomorrow = (h: number) => {
+    const d = new Date(now.getTime() + 24 * hour);
+    d.setUTCHours(h - 8, 0, 0, 0); // venue hours in Asia/Manila (UTC+8)
+    return d;
+  };
+  const players = await prisma.user.findMany({
+    where: { email: { endsWith: '@player.test' } },
+    orderBy: { email: 'asc' },
+  });
+
+  const createSession = async (
+    venueSlug: string,
+    courtNumbers: number[],
+    data: {
+      title: string;
+      startsAt: Date;
+      endsAt: Date;
+      skillLevel: 'ALL' | 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+      status?: 'LIVE';
+    },
+  ) => {
+    const venue = await prisma.venue.findUniqueOrThrow({
+      where: { slug: venueSlug },
+      include: { courts: { where: { number: { in: courtNumbers } } } },
+    });
+    return prisma.openPlaySession.create({
+      data: {
+        ...data,
+        venueId: venue.id,
+        capacity: 16,
+        feeCents: 25000,
+        createdById: ownerId,
+        courts: { create: venue.courts.map((c) => ({ courtId: c.id })) },
+        blocks: {
+          create: venue.courts.map((c) => ({
+            courtId: c.id,
+            startsAt: data.startsAt,
+            endsAt: data.endsAt,
+            reason: 'OPEN_PLAY' as const,
+            createdById: ownerId,
+          })),
+        },
+      },
+    });
+  };
+
+  const live = await createSession('rally-house', [1, 2], {
+    title: 'Morning mixer',
+    startsAt: new Date(now.getTime() - hour),
+    endsAt: new Date(now.getTime() + 2 * hour),
+    skillLevel: 'ALL',
+    status: 'LIVE',
+  });
+  for (const [i, p] of players.entries()) {
+    const at = new Date(now.getTime() - hour + i * 60_000);
+    await prisma.openPlayRegistration.create({
+      data: { sessionId: live.id, userId: p.id, status: 'CHECKED_IN', joinedAt: at, checkedInAt: at },
+    });
+    await prisma.queueEntry.create({ data: { sessionId: live.id, userId: p.id, enteredAt: at } });
+  }
+
+  await createSession('rally-house', [3, 4], {
+    title: 'Intermediate open play',
+    startsAt: tomorrow(18),
+    endsAt: tomorrow(21),
+    skillLevel: 'INTERMEDIATE',
+  });
+  await createSession('dink-district', [1, 2, 3], {
+    title: 'Beginner drills + play',
+    startsAt: tomorrow(9),
+    endsAt: tomorrow(11),
+    skillLevel: 'BEGINNER',
+  });
+  await createSession('kitchen-line-club', [1, 2], {
+    title: 'Advanced ladder',
+    startsAt: tomorrow(19),
+    endsAt: tomorrow(22),
+    skillLevel: 'ADVANCED',
+  });
 }
 
 main().finally(() => prisma.$disconnect());
