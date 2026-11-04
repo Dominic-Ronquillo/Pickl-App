@@ -12,4 +12,4 @@
 - [ ] Tests cover new rules and fixes
 - [ ] Schema changes include a migration, and new tables enable Row Level Security
 - [ ] Docs updated (endpoints, environment variables, behavior)
-- [ ] Targets the right branch: `be-*` → `be-main`, `fe-*` → `fe-main`, `be-main`/`fe-main` → `develop`
+- [ ] Targets the right branch: `be-*` → `be-main`, `fe-*` → `fe-main`, `be-main`/`fe-main` → `develop` (never `main`)

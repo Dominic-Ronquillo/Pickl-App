@@ -1,5 +1,13 @@
 # Courtside
 
+> **This branch is the project overview.** The code lives on [`develop`](https://github.com/Dominic-Ronquillo/Pickl-App/tree/develop) (latest working version), with backend work on [`be-main`](https://github.com/Dominic-Ronquillo/Pickl-App/tree/be-main) and frontend work on [`fe-main`](https://github.com/Dominic-Ronquillo/Pickl-App/tree/fe-main). To get started:
+>
+> ```bash
+> git clone -b develop https://github.com/Dominic-Ronquillo/Pickl-App.git
+> ```
+>
+> Open pull requests against `develop`, `be-main` or `fe-main`, never `main`. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 Courtside is a pickleball platform with two web apps: one for **players** and one for **venues**.
 
 - **Players** book courts by the hour, join open play sessions for their skill level, and follow live lineups with their place in the queue.
@@ -51,7 +59,7 @@ packages/
   ui/           shared design system: theme, components, app shell, court diagram
 design/
   prototype.html  original clickable mobile prototype (visual reference)
-Courtside_pickleball_app.html  latest prototype revision, maintained on GitHub
+Courtside_pickleball_app.html  latest prototype revision (also on this branch)
 docs/           architecture, setup, queue rules, deployment, roadmap
 .github/        CI workflow and pull request template
 ```
@@ -74,8 +82,8 @@ You can run these from the repository root:
 
 - [Getting started](docs/getting-started.md): setup, environment variables, everyday tasks
 - [Architecture](docs/architecture.md): how the pieces fit, conventions, data flow
-- [API reference](apps/api/README.md): every endpoint, data model, real-time events
-- [Player app](apps/player/README.md) and [venue app](apps/venue/README.md): structure and how to add a page
+- [API reference](https://github.com/Dominic-Ronquillo/Pickl-App/blob/develop/apps/api/README.md): every endpoint, data model, real-time events
+- [Player app](https://github.com/Dominic-Ronquillo/Pickl-App/blob/develop/apps/player/README.md) and [venue app](https://github.com/Dominic-Ronquillo/Pickl-App/blob/develop/apps/venue/README.md): structure and how to add a page
 - [Open play queue rules](docs/queue-rules.md): the rotation and where the rules came from
 - [Deployment](docs/deployment.md): Supabase setup, Docker image, static web build, migrations
 - [Roadmap](docs/roadmap.md): open decisions and next work
