@@ -222,6 +222,28 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .check svg.i{width:18px;height:18px;stroke-width:2.4}
 .ri .acts{display:flex;gap:6px;align-items:center}
 .txtbtn{font-size:13px;font-weight:650;color:var(--danger);padding:6px}
+.txtbtn.plain{color:var(--accent)}
+
+/* Open play queue + chat */
+.sub3{font-size:13px;font-weight:750;color:var(--ink2);margin:16px 0 6px}
+.upn .grow{flex:1;min-width:0}
+.opcard{margin-bottom:14px}
+.opcard h3{font-size:17px;font-weight:700}
+.opcard>.btn{margin-top:12px}
+.callout{display:flex;gap:12px;align-items:center;background:var(--kitchen);color:#fff;border-radius:16px;padding:14px 16px;margin:8px 0 4px}
+.callout .grow{flex:1;min-width:0}
+.callout b{display:block;font-stretch:80%;font-size:21px;font-weight:800;line-height:1.1}
+.callout p{font-size:14px;opacity:.92}
+.callout button{background:#fff;color:var(--kitchen);font-weight:750;padding:9px 16px;border-radius:999px;min-height:44px;flex:none}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--danger);margin-left:6px;vertical-align:1px;flex:none}
+.tab .dot{position:absolute;top:8px;left:calc(50% + 6px);margin:0}
+.msgs{display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow-y:auto;padding:4px 0 12px}
+.msg{max-width:82%;align-self:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:14px 14px 14px 4px;padding:8px 12px}
+.msg.me{align-self:flex-end;background:var(--court);border-color:var(--court);color:#fff;border-radius:14px 14px 4px 14px}
+.msg span{white-space:pre-wrap;overflow-wrap:anywhere}
+.msg small{display:block;font-size:11px;opacity:.72;margin-top:2px}
+.chatbar{display:flex;gap:8px;align-items:center;margin-top:4px}
+.chatbar input{flex:1;min-width:0;padding:11px 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);font:inherit}
 
 /* Sheet, toast */
 .scrim{position:absolute;inset:0;background:var(--scrim);display:flex;align-items:flex-end;z-index:20;animation:fade .15s ease-out}
@@ -419,6 +441,7 @@ body{background:var(--surface)}
   .tabs{gap:4px}
   .tab{flex-direction:row;justify-content:flex-start;gap:12px;font-size:15px;padding:11px 14px;min-height:48px}
   .tab svg.i{width:22px;height:22px}
+  .tab .dot{position:static;margin-left:auto}
   .tab[aria-current="page"]::after{left:-16px}
   .acct{display:flex;align-items:center;gap:12px;margin-top:auto;width:100%;padding:10px;border-radius:14px;border:1px solid var(--nav-line);color:var(--nav-ink)}
   .acct .t{min-width:0;display:block}
@@ -515,7 +538,8 @@ const S = {
   view: null, sheet: null, toast: null, filter: 'All',
   joined: new Set(), venue: 0, day: 0, dur: 1, sel: null,
   my: [], bizDay: 0, sched: {}, bizOpen: null, checked: new Set(),
-  bfilter: 'up', bookings: [], theme: 'auto'
+  bfilter: 'up', bookings: [], theme: 'auto',
+  chats: {}, unread: {}, notice: null
 };
 
 /* ---------- Persistent local data ---------- */
@@ -540,6 +564,7 @@ function loadState() {
       S.bookings = Array.isArray(S.bookings) ? S.bookings : [];
       S.my = Array.isArray(S.my) ? S.my : [];
       S.sched = S.sched || {};
+      S.chats = S.chats || {}; S.unread = S.unread || {};
       SESSIONS.forEach(session => { session.roster = Array.isArray(session.roster) ? session.roster : []; });
     }
   } catch (err) { console.warn('Saved app data could not be loaded:', err); }
@@ -575,6 +600,53 @@ function syncPlayerReservationFromVenue(b) {
   if (!r) return;
   r.c = b.court; r.h = b.hour; r.d = b.day; r.dur = b.dur; r.total = b.amt;
   if (b.status === 'cancel') r.status = 'cancel';
+}
+
+/* ---------- Open play queue ----------
+   First come, first play: players who joined the session tap "I've arrived"
+   to get in line. When the organizer ends a game, those four go to the back
+   and the next four in line are called to that court. */
+const MEID = 'current-player';
+const DEMO_NAMES = ['Ana Reyes', 'Ben Cruz', 'Carla Santos', 'Diego Lim', 'Ella Tan', 'Franco Diaz', 'Gia Ramos', 'Hugo Navarro'];
+const esc = t => String(t).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
+function opState(s) {
+  if (!Array.isArray(s.queue)) s.queue = [];
+  if (!s.games || typeof s.games !== 'object') s.games = {};
+  return s;
+}
+const pname = (s, pid) => pid === MEID ? 'You' : esc((s.roster.find(p => p && p.playerId === pid) || {}).name || 'Player');
+const onCourt = (s, pid) => { for (const c in opState(s).games) if (s.games[c].includes(pid)) return +c; return 0; };
+function callNext(s, c) {
+  opState(s);
+  if (s.queue.length < 4) return false;
+  const four = s.queue.splice(0, 4);
+  s.games[c] = four;
+  if (four.includes(MEID)) S.notice = { sid: s.id, court: c };
+  return true;
+}
+function dropFromQueue(s, pid) {
+  opState(s);
+  s.queue = s.queue.filter(x => x !== pid);
+  for (const c in s.games) s.games[c] = s.games[c].filter(x => x !== pid);
+  if (pid === MEID && S.notice && S.notice.sid === s.id) S.notice = null;
+}
+
+/* ---------- Chat ----------
+   op-<sessionId>: player asking the open play organizer
+   bk-<reservationId>: player and venue about a court reservation */
+const side = () => S.mode === 'business' ? 'venue' : 'player';
+const hasUnread = (key, who = side()) => !!S.unread[`${key}:${who}`];
+const unreadDot = (key, who) => hasUnread(key, who) ? '<span class="dot" aria-label="New message"></span>' : '';
+function chatInfo(key) {
+  const [kind, id] = [key.slice(0, 2), +key.slice(3)];
+  if (kind === 'op') {
+    const s = SESSIONS.find(x => x.id === id);
+    const sub = s ? `${s.venue} open play, ${s.day}, ${s.time}` : 'Open play session';
+    return side() === 'player' ? { title: 'Message the organizer', sub, other: 'Organizer' } : { title: 'Player question', sub, other: 'Player' };
+  }
+  const b = S.my.find(x => x.id === id) || {};
+  const sub = b.c ? `Court ${b.c}, ${DAYS[b.d].dow} ${DAYS[b.d].d}, ${fmtH(b.h)} · ${VENUES[b.v]}` : 'Court reservation';
+  return side() === 'player' ? { title: 'Message the venue', sub, other: 'Venue' } : { title: 'Reservation chat', sub, other: 'Player' };
 }
 
 /* ---------- Court diagram ---------- */
@@ -668,7 +740,8 @@ function sessDetail(id) {
     <p class="muted">${s.day}, ${s.time}</p>
     <div class="facts"><div><b>${peso(s.fee)}</b><span>Per player</span></div><div><b>${n}/${s.cap}</b><span>Players</span></div><div><b>${s.courts}</b><span>Courts</span></div></div>
     <p class="muted" style="margin-top:12px">${s.level} play, ratings ${s.range}. Bring your own paddle; balls provided.</p>
-    ${j ? `<p class="note">You’re checked in. You’ll see your court in Lineups when it’s your turn.</p>` : ''}
+    ${j ? `<button class="note" data-act="tab" data-v="lineups">You’ve joined. When you get to the venue, open Lineups and join the queue.</button>` : ''}
+    <button class="btn line ic" style="margin-top:12px" data-act="chat" data-v="op-${s.id}">Message the organizer${unreadDot('op-' + s.id)}</button>
     </div><div class="d-side">
     <h2 class="sec">Players</h2>
     <div class="empty">${n ? `${n} player${n===1?'':'s'} signed up.` : 'No players have joined yet.'}</div>
@@ -676,8 +749,26 @@ function sessDetail(id) {
     <div class="card" style="display:flex;flex-wrap:wrap;gap:8px">${roster.slice(0, 18).map(av).join('')}${roster.length > 18 ? `<span class="av" style="background:var(--line);color:var(--ink2)">+${roster.length - 18}</span>` : ''}</div></div></div>`;
 }
 function lineupsScreen() {
-  const joined = SESSIONS.filter(x => S.joined.has(x.id));
-  return `<div class="pg lin"><h2 class="sec">Your open play sessions</h2>${joined.length ? joined.map(x => `<div class="card" style="margin-bottom:12px"><h3>${x.venue}</h3><p class="muted">${x.day}, ${x.time}</p><p>${x.roster.length} other players signed up</p></div>`).join('') : '<div class="empty">You haven’t joined an open play session yet.</div>'}</div>`;
+  const joined = SESSIONS.filter(x => S.joined.has(x.id)).map(opState);
+  const card = s => {
+    const court = onCourt(s, MEID), pos = s.queue.indexOf(MEID) + 1;
+    const status = court
+      ? `<p class="note">You’re playing on Court ${court}.</p>`
+      : pos
+        ? `<p class="note">You’re #${pos} in line.${pos <= 4 ? ' You’re in the next group.' : ''}</p><button class="btn line" data-act="leaveq" data-v="${s.id}">Leave the queue</button>`
+        : `<button class="btn primary" data-act="arrive" data-v="${s.id}">I’ve arrived, join the queue</button>`;
+    const courts = Array.from({ length: s.courts }, (_, i) => i + 1).map(c => {
+      const g = s.games[c];
+      return `<div class="ri"><span class="st ${g ? 'play' : 'free'}">Court ${c}</span><div class="grow"><p>${g ? g.map(p => pname(s, p)).join(', ') : 'Free'}</p></div></div>`;
+    }).join('');
+    const line = s.queue.map((p, i) => `<div class="upn${p === MEID ? ' you' : ''}"><span class="pos">${i + 1}</span><div class="grow">${pname(s, p)}</div></div>`).join('');
+    return `<div class="card opcard"><h3>${s.venue}</h3><p class="muted">${s.day}, ${s.time}</p>${status}
+      <h4 class="sub3">Courts</h4><div class="list">${courts}</div>
+      <h4 class="sub3">Waiting line (${s.queue.length})</h4>${line ? `<div class="list">${line}</div>` : '<p class="muted">Nobody is waiting yet.</p>'}</div>`;
+  };
+  return `<div class="pg lin"><div class="l-top"><h2 class="sec">Your open play sessions</h2></div>
+    <div class="l-main">${joined.length ? joined.map(card).join('') : '<div class="empty">You haven’t joined an open play session yet.<br><button data-act="tab" data-v="open">Find open play</button></div>'}</div>
+    <div class="l-side"><div class="card"><h3>How the queue works</h3><p class="muted" style="margin-top:6px">Only players who joined the session can get in line. Tap “I’ve arrived” when you get to the venue. First come, first play: when a game ends, the next four in line are called and you’ll get a notice with your court.</p></div></div></div>`;
 }
 
 function bookScreen() {
@@ -705,7 +796,7 @@ function bookScreen() {
     <p class="muted" style="margin-top:6px">Prices are per court per hour. Evenings from 5 PM cost more.</p></div></div>
     <div class="b-aside"><div class="b-side">
     <h2 class="sec">My bookings</h2>
-    <div class="list">${myList.map(b => `<div class="ri"><span class="st ${b.status === 'cancel' ? 'cancel' : 'booked'}">Court ${b.c}</span><div class="grow"><h3>${DAYS[b.d].dow} ${DAYS[b.d].d}, ${fmtH(b.h)}</h3><p>${VENUES[b.v]}, ${b.dur} hr${b.status === 'cancel' ? ' · Cancelled' : ''}</p></div><span class="fee">${peso(b.total)}</span>${b.status === 'cancel' ? '' : `<button class="txtbtn" data-act="editbooking" data-v="${b.id}">Edit</button><button class="txtbtn" data-act="deletebooking" data-v="${b.id}">Cancel</button>`}</div>`).join('') || '<p class="muted" style="padding:14px 0">No bookings yet.</p>'}</div></div>
+    <div class="list">${myList.map(b => `<div class="ri"><span class="st ${b.status === 'cancel' ? 'cancel' : 'booked'}">Court ${b.c}</span><div class="grow"><h3>${DAYS[b.d].dow} ${DAYS[b.d].d}, ${fmtH(b.h)}</h3><p>${VENUES[b.v]}, ${b.dur} hr${b.status === 'cancel' ? ' · Cancelled' : ''}</p></div><span class="fee">${peso(b.total)}</span>${b.status === 'cancel' ? '' : `<button class="txtbtn plain" data-act="chat" data-v="bk-${b.id}">Message${unreadDot('bk-' + b.id)}</button><button class="txtbtn" data-act="editbooking" data-v="${b.id}">Edit</button><button class="txtbtn" data-act="deletebooking" data-v="${b.id}">Cancel</button>`}</div>`).join('') || '<p class="muted" style="padding:14px 0">No bookings yet.</p>'}</div></div>
     ${S.sel ? `<div class="sumbar"><div class="grow"><b>Court ${S.sel.c}, ${DAYS[d].dow} ${DAYS[d].d}</b><p class="muted">${fmtH(S.sel.h)} for ${S.dur} hr, ${peso(total)}</p></div><button class="btn primary" data-act="reserve">Reserve court</button></div>` : ''}</div></div>`;
 }
 
@@ -750,17 +841,30 @@ function bizOpenScreen() {
     <button class="btn dark ic" data-act="sheet" data-v="create">${ic('plus')}Create open play session</button>
     <h2 class="sec">Sessions</h2>
     ${mineS.length ? mineS.map(s => {
+      opState(s);
       const open = S.bizOpen === s.id;
-      const isLive = false;
-      const count = S.checked.size;
+      const isLive = Object.keys(s.games).length > 0;
+      const key = 'op-' + s.id;
+      const courts = Array.from({ length: s.courts }, (_, i) => i + 1).map(c => {
+        const g = s.games[c];
+        return `<div class="ri"><span class="st ${g ? 'play' : 'free'}">Court ${c}</span><div class="grow"><p>${g ? g.map(p => pname(s, p)).join(', ') : 'Free'}</p></div>
+          ${g ? `<button class="btn primary small" data-act="endgame" data-v="${s.id}-${c}">Game finished</button>` : `<button class="btn line small" data-act="startgame" data-v="${s.id}-${c}">Start game</button>`}</div>`;
+      }).join('');
+      const line = s.queue.map((p, i) => `<div class="upn"><span class="pos">${i + 1}</span><div class="grow">${pname(s, p)}</div><button class="txtbtn" data-act="dropq" data-v="${s.id}|${p}">Remove</button></div>`).join('');
+      const demo = s.roster.some(p => p && String(p.playerId).startsWith('demo-'));
       return `<div class="bsess">
         <button class="bsess-head" data-act="bopen" data-v="${s.id}" aria-expanded="${open}">
-          <div class="grow"><h3>${s.day}, ${s.time}</h3><p class="muted">${s.level}, ${s.roster.length}/${s.cap} signed up, ${peso(s.fee)}</p>
-          ${isLive ? `<div class="spots"><div class="bar"><i style="width:${count / s.roster.length * 100}%"></i></div>${count} of ${s.roster.length} checked in</div>` : ''}</div>
+          <div class="grow"><h3>${s.day}, ${s.time}</h3><p class="muted">${s.level}, ${s.roster.length}/${s.cap} signed up, ${s.queue.length} in line, ${peso(s.fee)}</p></div>
+          ${hasUnread(key) ? '<span class="dot" aria-label="New message"></span>' : ''}
           ${isLive ? '<span class="st play">Live</span>' : '<span class="st free">Upcoming</span>'}
         </button>
         ${open ? `<div class="bsess-body">
-          <p class="muted" style="margin-top:12px">${s.roster.length} players signed up.</p>
+          <p class="muted" style="margin-top:12px">${s.roster.length} players signed up. Players get in line when they arrive. Tap Game finished to send those four to the back and call the next four.</p>
+          <h4 class="sub3">Courts</h4><div class="list">${courts}</div>
+          <h4 class="sub3">Waiting line (${s.queue.length})</h4>${line ? `<div class="list">${line}</div>` : '<p class="muted">Nobody is waiting yet.</p>'}
+          ${demo ? '' : `<button class="btn line small" style="margin-top:10px" data-act="demoplayers" data-v="${s.id}">Add demo players to the line</button>`}
+          <h4 class="sub3">Player questions</h4>
+          ${S.chats[key] ? `<button class="btn line ic" data-act="chat" data-v="${key}">Open chat with player${unreadDot(key)}</button>` : '<p class="muted">No questions from players yet.</p>'}
           <div class="row" style="margin-top:12px"><button class="btn line" data-act="editsess" data-v="${s.id}">Edit session</button><button class="btn line" data-act="deletesess" data-v="${s.id}">Delete session</button></div>
         </div>` : ''}
       </div>`;
@@ -769,7 +873,8 @@ function bizOpenScreen() {
 function bookingRow(b) {
   const tbl = S.mode === 'business' && S.tab.business === 'bookings';
   const st = b.status === 'cancel' ? '<span class="st cancel">Cancelled</span>' : b.paid ? '<span class="st booked">Paid</span>' : '<span class="st unpaid">Unpaid</span>';
-  const acts = b.status === 'up' ? `${!b.paid ? `<button class="btn primary small" data-act="paid" data-v="${b.id}">Mark paid</button>` : ''}<button class="txtbtn" data-act="editb" data-v="${b.id}">Edit</button><button class="txtbtn" data-act="cancelb" data-v="${b.id}">Cancel</button><button class="txtbtn" data-act="deleteb" data-v="${b.id}">Delete</button>` : `<button class="txtbtn" data-act="deleteb" data-v="${b.id}">Delete</button>`;
+  const msg = b.sourceReservationId && (b.status === 'up' || S.chats['bk-' + b.sourceReservationId]) ? `<button class="txtbtn plain" data-act="chat" data-v="bk-${b.sourceReservationId}">Message${unreadDot('bk-' + b.sourceReservationId)}</button>` : '';
+  const acts = msg + (b.status === 'up' ? `${!b.paid ? `<button class="btn primary small" data-act="paid" data-v="${b.id}">Mark paid</button>` : ''}<button class="txtbtn" data-act="editb" data-v="${b.id}">Edit</button><button class="txtbtn" data-act="cancelb" data-v="${b.id}">Cancel</button><button class="txtbtn" data-act="deleteb" data-v="${b.id}">Delete</button>` : `<button class="txtbtn" data-act="deleteb" data-v="${b.id}">Delete</button>`);
   return `<div class="ri bk${tbl ? ' bk-t' : ''}">
     <div class="grow"><h3>${b.who}</h3><p>${b.venue ? b.venue + " · " : ""}Court ${b.court}, ${b.when}, ${b.dur} hr</p></div>
     <div class="bk-amt"><div class="fee">${peso(b.amt)}</div>${st}</div>
@@ -825,6 +930,15 @@ function sheetHTML() {
       </div>
       <div class="stack-btns"><button class="btn primary" data-act="create">Create session</button><button class="btn line" data-act="close">Cancel</button></div>`;
   }
+  if (sh.type === 'chat') {
+    const info = chatInfo(sh.key), me = side();
+    const msgs = S.chats[sh.key] || [];
+    const tm = at => new Date(at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    body = `<h2>${info.title}</h2><p class="muted">${esc(info.sub)}</p>
+      <div class="msgs" id="msgs" role="log" aria-label="Messages">${msgs.length ? msgs.map(m => `<div class="msg${m.from === me ? ' me' : ''}"><span>${esc(m.text)}</span><small>${m.from === me ? 'You' : info.other}, ${tm(m.at)}</small></div>`).join('') : '<p class="muted">No messages yet.</p>'}</div>
+      <div class="chatbar"><input id="chat-input" placeholder="Write a message" aria-label="Message" autocomplete="off"><button class="btn primary small" data-act="send">Send</button></div>
+      <div class="stack-btns"><button class="btn line" data-act="close">Close</button></div>`;
+  }
   return `<div class="scrim" data-act="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" tabindex="-1"><div class="grab"></div>${body.replace('<h2>', '<h2 id="sheet-title">')}</div></div>`;
 }
 
@@ -844,9 +958,21 @@ function header() {
   const initials = S.mode === 'business' ? 'V' : 'P';
   return `<header class="hdr"><div class="t"><h1>${TITLES[tab]}</h1>${sub ? `<p>${sub}</p>` : ''}</div><button class="avatar" data-act="sheet" data-v="profile" aria-label="Account and app switcher">${S.mode === 'business' ? 'V' : 'P'}</button></header>`;
 }
+function noticeBanner() {
+  const n = S.notice;
+  if (S.mode !== 'player' || !n) return '';
+  const s = SESSIONS.find(x => x.id === n.sid);
+  if (!s || onCourt(s, MEID) !== n.court) { S.notice = null; return ''; }
+  return `<div class="callout" role="alert"><div class="grow"><b>You’re up! Go to Court ${n.court}.</b><p>${s.venue} open play: your game is ready.</p></div><button data-act="dismiss">OK</button></div>`;
+}
 function screen() {
   if (S.view) return SESSIONS.some(x => x.id === S.view.id) ? sessDetail(S.view.id) : '<div class="empty">Session not found.</div>';
   return ({ home: homeScreen, open: openScreen, book: bookScreen, lineups: lineupsScreen, dash: dashScreen, sched: schedScreen, bizopen: bizOpenScreen, bookings: bookingsScreen })[S.tab[S.mode]]();
+}
+/* which tab holds an unread chat for the side you're on */
+function tabUnread(k) {
+  const me = side(), pre = { open: 'op-', bizopen: 'op-', book: 'bk-', bookings: 'bk-' }[k];
+  return !!pre && Object.keys(S.unread).some(u => u.startsWith(pre) && u.endsWith(':' + me));
 }
 function footer() {
   const biz = S.mode === 'business';
@@ -854,7 +980,7 @@ function footer() {
   const nav = `<nav class="tabbar" aria-label="Main">
     <div class="brand"><span class="logo">${ic('paddle')}</span><div class="t"><b>Courtside</b><small>${biz ? 'Venue app' : 'Player app'}</small></div></div>
     <div class="modes" role="group" aria-label="Which side of the app">${[['player', 'Player'], ['business', 'Venue']].map(([k, l]) => `<button data-act="mode" data-v="${k}" aria-pressed="${S.mode === k}">${l}<span class="x"> app</span></button>`).join('')}</div>
-    <div class="tabs">${tabs.map(([k, l, i]) => `<button class="tab" data-act="tab" data-v="${k}" ${S.tab[S.mode] === k ? 'aria-current="page"' : ''}>${ic(i)}${l}</button>`).join('')}</div>
+    <div class="tabs">${tabs.map(([k, l, i]) => `<button class="tab" data-act="tab" data-v="${k}" ${S.tab[S.mode] === k ? 'aria-current="page"' : ''}>${ic(i)}${l}${tabUnread(k) ? '<span class="dot" aria-label="New message"></span>' : ''}</button>`).join('')}</div>
     <button class="acct" data-act="sheet" data-v="profile" aria-label="Account and app switcher"><span class="avatar">${biz ? 'V' : 'P'}</span><span class="t"><b>${biz ? 'Your venue' : 'Your account'}</b><small>${biz ? 'Venue manager' : 'Player account'}</small></span></button>
   </nav>`;
   if (!S.view) return nav;
@@ -877,7 +1003,7 @@ function render() {
   const shell = document.getElementById('shell');
   shell.classList.toggle('biz', S.mode === 'business');
   shell.classList.toggle('sub', !!S.view);
-  app.innerHTML = header() + `<main class="scroll" id="scroll" tabindex="-1">${screen()}</main>` + footer() + sheetHTML() +
+  app.innerHTML = header() + `<main class="scroll" id="scroll" tabindex="-1">${noticeBanner()}${screen()}</main>` + footer() + sheetHTML() +
     (S.toast ? `<div class="toast" aria-hidden="true">${ic('check')}<span>${S.toast}</span></div>` : '');
   const nsc = document.getElementById('scroll');
   nsc.scrollTop = keep;
@@ -891,6 +1017,10 @@ function render() {
   else target = lastSheet ? find(openerKey) : find(fk);
   if (!target && rendered && changed && !S.sheet) target = nsc;
   if (target) target.focus({ preventScroll: true });
+  if (S.sheet && S.sheet.type === 'chat') {
+    const ms = document.getElementById('msgs'); if (ms) ms.scrollTop = ms.scrollHeight;
+    const inp = document.getElementById('chat-input'); if (inp) inp.focus({ preventScroll: true });
+  }
   lastSheet = !!S.sheet; lastKey = key; rendered = true;
 }
 let toastTimer;
@@ -923,6 +1053,7 @@ const A = {
   leave: v => {
     S.joined.delete(+v);
     const s = SESSIONS.find(x => x.id === +v);
+    if (s) dropFromQueue(s, MEID);
     if (s && Array.isArray(s.roster)) s.roster = s.roster.filter(p => !p || p.playerId !== 'current-player');
     toast('You left the session. Your fee will be refunded.');
   },
@@ -981,6 +1112,58 @@ const A = {
   editbooking: v => { const b = S.my.find(x => x.id === +v); if (!b || b.status === 'cancel') return; const court = prompt('Court number (1–4)', b.c); if (court === null) return; const duration = prompt('Duration in hours (1 or 2)', b.dur); if (duration === null) return; const linked = S.bookings.find(x => x.sourceReservationId === b.id); if (linked) clearBookingSchedule(linked); b.c = Math.min(4, Math.max(1, Number(court)||b.c)); b.dur = Math.min(2, Math.max(1, Number(duration)||b.dur)); b.total = Array.from({length:b.dur},(_,i)=>price(b.h+i)).reduce((a,x)=>a+x,0); if(linked){ linked.court=b.c; linked.dur=b.dur; linked.amt=b.total; for(let i=0;i<b.dur;i++) S.sched[`${b.d}-${b.c}-${b.h+i}`]={t:'b',who:linked.who,bookingId:linked.id}; } toast('Reservation updated. Venue schedule updated.'); },
   deletebooking: v => { if (!confirm('Cancel this court reservation?')) return; const b = S.my.find(x => x.id === +v); if (!b) return; b.status = 'cancel'; const linked = S.bookings.find(x => x.sourceReservationId === b.id); if(linked){ linked.status='cancel'; clearBookingSchedule(linked); } toast('Reservation cancelled. Venue schedule updated.'); },
   bfilter: v => { S.bfilter = v; },
+  arrive: v => {
+    const s = SESSIONS.find(x => x.id === +v); if (!s) return;
+    if (!S.joined.has(s.id)) { toast('Only players who joined this session can join the queue.'); return; }
+    opState(s);
+    if (s.queue.includes(MEID) || onCourt(s, MEID)) return;
+    s.queue.push(MEID);
+    toast(`You’re in line: #${s.queue.length}. We’ll tell you your court when it’s your turn.`);
+  },
+  leaveq: v => { const s = SESSIONS.find(x => x.id === +v); if (!s) return; dropFromQueue(s, MEID); toast('You left the queue.'); },
+  dismiss: () => { S.notice = null; },
+  startgame: v => {
+    const [sid, c] = v.split('-').map(Number);
+    const s = SESSIONS.find(x => x.id === sid); if (!s) return;
+    if (!callNext(s, c)) { toast('You need 4 players in line to start a game.'); return; }
+    toast(`Game started on Court ${c}. Those players have been notified.`);
+  },
+  endgame: v => {
+    const [sid, c] = v.split('-').map(Number);
+    const s = SESSIONS.find(x => x.id === sid); if (!s) return;
+    opState(s);
+    const done = s.games[c] || [];
+    delete s.games[c];
+    s.queue.push(...done);
+    if (S.notice && S.notice.sid === s.id && done.includes(MEID)) S.notice = null;
+    toast(callNext(s, c) ? `Next 4 players called to Court ${c}.` : `Court ${c} is free. Waiting for 4 players in line.`);
+  },
+  dropq: v => {
+    const [sid, pid] = v.split('|');
+    const s = SESSIONS.find(x => x.id === +sid); if (!s) return;
+    dropFromQueue(s, pid);
+    toast(`${pname(s, pid)} removed from the line.`);
+  },
+  demoplayers: v => {
+    const s = SESSIONS.find(x => x.id === +v); if (!s) return;
+    opState(s);
+    const room = Math.max(0, s.cap - s.roster.length);
+    DEMO_NAMES.slice(0, room).forEach((name, i) => {
+      const playerId = `demo-${s.id}-${i}`;
+      s.roster.push({ playerId, name, joinedAt: Date.now(), checkedIn: true });
+      s.queue.push(playerId);
+    });
+    toast(room ? `Added ${Math.min(room, DEMO_NAMES.length)} demo players to the line.` : 'This session is full.');
+  },
+  chat: v => { S.sheet = { type: 'chat', key: v }; delete S.unread[`${v}:${side()}`]; },
+  send: () => {
+    const inp = document.getElementById('chat-input');
+    const text = (inp && inp.value || '').trim();
+    if (!text || !S.sheet || S.sheet.type !== 'chat') return 'skip';
+    const key = S.sheet.key, me = side();
+    (S.chats[key] = S.chats[key] || []).push({ from: me, text, at: Date.now() });
+    S.unread[`${key}:${me === 'player' ? 'venue' : 'player'}`] = true;
+  },
   paid: v => { S.bookings.find(b => b.id === +v).paid = true; toast('Marked as paid'); },
   cancelb: v => { const b = S.bookings.find(x => x.id === +v); if (!b) return; b.status = 'cancel'; clearBookingSchedule(b); syncPlayerReservationFromVenue(b); toast(`Booking for ${b.who} cancelled`); }
 };
@@ -996,14 +1179,17 @@ document.addEventListener('click', e => {
   if (!el || el.disabled) return;
   const fn = A[el.dataset.act];
   if (!fn) return;
-  if (el.dataset.act === 'sheet' || el.dataset.act === 'bslot') openerKey = keyOf(el);
+  if (el.dataset.act === 'sheet' || el.dataset.act === 'bslot' || el.dataset.act === 'chat') openerKey = keyOf(el);
   if (fn(el.dataset.v, el, e) === 'skip') return;
   render();
 });
 try { S.theme = S.theme || localStorage.getItem('courtside-theme') || 'auto'; } catch (e) { S.theme = 'auto'; }
 function applyTheme() { if (S.theme === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', S.theme); }
 applyTheme();
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.sheet) { S.sheet = null; render(); } });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && S.sheet) { S.sheet = null; render(); }
+  if (e.key === 'Enter' && e.target.id === 'chat-input') { e.preventDefault(); if (A.send() !== 'skip') render(); }
+});
 render();
 </script>
 </body>
